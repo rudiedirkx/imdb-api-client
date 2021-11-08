@@ -10,8 +10,9 @@ class Client {
 
 	protected $auth;
 	protected $guzzle;
+	public $watchlist;
 
-	public function __construct( ImdbWebAuth $auth ) {
+	public function __construct( ImdbAuth $auth ) {
 		$this->auth = $auth;
 
 		$this->guzzle = new Guzzle([
@@ -21,6 +22,30 @@ class Client {
 				'track_redirects' => true,
 			] + RedirectMiddleware::$defaultSettings,
 		]);
+	}
+
+	public function authNeedsLogin() : bool {
+		return $this->auth->needsLogin();
+	}
+
+	protected function extractWatchlistMeta(string $html) : void {
+		if (preg_match('#"total":(\d+)#', $html, $match)) {
+			$this->watchlist = new WatchlistMeta($match[1]);
+		}
+	}
+
+	public function checkSession() : bool {
+		$rsp = $this->guzzle->get('https://www.imdb.com/list/watchlist');
+		$html = (string) $rsp->getBody();
+		$doc = Node::create($html);
+
+		$link = $doc->query('a[href^="/registration/logout"]');
+		if ($link && preg_match('#^/registration/logout(\?|\#|$)#', $link['href'])) {
+			$this->extractWatchlistMeta($html);
+			return true;
+		}
+
+		return false;
 	}
 
 	public function logIn() {

@@ -2,4 +2,9 @@
 
 require 'inc.bootstrap.php';
 
-var_dump($client->logIn());
+if ( $client->authNeedsLogin() ) {
+	var_dump($client->logIn());
+}
+
+var_dump($client->checkSession());
+var_dump($client->watchlist);
