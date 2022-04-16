@@ -8,3 +8,5 @@ if ( $client->authNeedsLogin() ) {
 
 var_dump($client->checkSession());
 var_dump($client->watchlist);
+
+print_r($client->_requests);

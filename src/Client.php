@@ -3,6 +3,7 @@
 namespace rdx\imdb;
 
 use GuzzleHttp\Client as Guzzle;
+use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RedirectMiddleware;
 use rdx\jsdom\Node;
 
@@ -10,6 +11,7 @@ class Client {
 
 	protected $auth;
 	protected $guzzle;
+	public $_requests = [];
 	public $watchlist;
 
 	public function __construct( ImdbAuth $auth ) {
@@ -35,17 +37,18 @@ class Client {
 	}
 
 	public function checkSession() : bool {
-		$rsp = $this->guzzle->get('https://www.imdb.com/list/watchlist');
-		$html = (string) $rsp->getBody();
-		$doc = Node::create($html);
-
-		$link = $doc->query('a[href^="/registration/logout"]');
-		if ($link && preg_match('#^/registration/logout(\?|\#|$)#', $link['href'])) {
-			$this->extractWatchlistMeta($html);
-			return true;
+		$rsp = $this->get('https://www.imdb.com/_ajax/list/watchlist/count');
+		if ($rsp->getStatusCode() != 200) {
+			return false;
 		}
 
-		return false;
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+		if (isset($data['count'])) {
+			$this->watchlist = new WatchlistMeta($data['count']);
+		}
+
+		return true;
 	}
 
 	public function logIn() {
@@ -90,6 +93,18 @@ echo "$html\n\n\n\n================\n\n\n\n";
 				return $a['href'];
 			}
 		}
+	}
+
+	protected function get( string $url ) : Response {
+		$rsp = $this->guzzle->get($url);
+		if (count($redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER))) {
+			$this->_requests[] = [$url, ...$redirects];
+		}
+		else {
+			$this->_requests[] = [$url];
+		}
+
+		return $rsp;
 	}
 
 }
