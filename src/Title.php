@@ -18,6 +18,10 @@ class Title implements SearchResult {
 		return "[TITLE] $this->name ($this->year) ($this->searchInfo) [$this->id]";
 	}
 
+	public function getUrl() : string {
+		return "https://www.imdb.com/title/$this->id/";
+	}
+
 	static public function fromJsonSearch(array $item) {
 		return new static(
 			$item['id'],

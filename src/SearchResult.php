@@ -9,4 +9,6 @@ interface SearchResult {
 
 	public function getSearchResult() : string;
 
+	public function getUrl() : string;
+
 }

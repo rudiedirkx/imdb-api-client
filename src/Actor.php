@@ -20,9 +20,11 @@ class Actor {
 			$link = $tr->query('a[href^="/name/"]');
 			if (count($cells) != 4 || !$link) continue;
 
+			$charlink = $cells[3]->query('a[href^="/title/"]');
+
 			$actors[] = new static(
 				new Person(Person::idFromHref($link['href']), $cells[1]->textContent),
-				new Character($cells[3]->textContent)
+				new Character($charlink ? $charlink->textContent : $cells[3]->textContent)
 			);
 		}
 

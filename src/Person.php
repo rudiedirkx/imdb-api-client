@@ -14,6 +14,10 @@ class Person implements SearchResult {
 		return "[PERSON] $this->name ($this->searchInfo) [$this->id]";
 	}
 
+	public function getUrl() : string {
+		return "https://www.imdb.com/name/$this->id/";
+	}
+
 	static public function fromJsonSearch(array $item) {
 		return new static(
 			$item['id'],
