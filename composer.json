@@ -1,5 +1,5 @@
 {
-    "name": "rdx/imdb-api",
+    "name": "rdx/imdb-user-api",
     "description": "Fake API client for IMDB user data",
     "type": "library",
     "require": {
