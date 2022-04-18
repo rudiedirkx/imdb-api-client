@@ -41,6 +41,14 @@ class Client {
 		return true;
 	}
 
+	public function getTitle( string $id ) : Title {
+		$rsp = $this->get("https://www.imdb.com/title/$id/");
+		$html = (string) $rsp->getBody();
+		$doc = Node::create($html);
+
+		return Title::fromDocument($id, $doc);
+	}
+
 	public function rateTitle( string $id, int $rating ) : bool {
 		$rsp = $this->graphql(<<<'GRAPHQL'
 		mutation UpdateTitleRating($rating: Int!, $titleId: ID!) {
