@@ -14,26 +14,16 @@ class Client {
 	public $_requests = [];
 	public $watchlist;
 
-	public function __construct( ImdbAuth $auth ) {
+	public function __construct( Auth $auth ) {
 		$this->auth = $auth;
 
 		$this->guzzle = new Guzzle([
 			'http_errors' => false,
-			'cookies' => $auth->cookies,
+			'cookies' => $auth->cookies(),
 			'allow_redirects' => [
 				'track_redirects' => true,
 			] + RedirectMiddleware::$defaultSettings,
 		]);
-	}
-
-	public function authNeedsLogin() : bool {
-		return $this->auth->needsLogin();
-	}
-
-	protected function extractWatchlistMeta(string $html) : void {
-		if (preg_match('#"total":(\d+)#', $html, $match)) {
-			$this->watchlist = new WatchlistMeta($match[1]);
-		}
 	}
 
 	public function checkSession() : bool {
@@ -51,40 +41,23 @@ class Client {
 		return true;
 	}
 
-	public function logIn() {
-		$rsp = $this->guzzle->get('https://www.imdb.com/registration/signin');
-print_r($rsp);
-		$html = (string) $rsp->getBody();
-// echo "$html\n";
-		$doc = Node::create($html);
+	public function search( string $query ) : array {
+		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', strtolower($query))), '_');
 
-		$startUrl = $this->getOauthUrl($doc);
-var_dump($startUrl);
+		$url = sprintf('https://v2.sg.media-imdb.com/suggestion/%s/%s.json', $clean[0], $clean);
 
-		$rsp = $this->guzzle->get($startUrl);
-print_r($rsp);
-		$html = (string) $rsp->getBody();
-echo "$html\n\n\n\n================\n\n\n\n";
-		$doc = Node::create($html);
+		$rsp = $this->get($url);
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
 
-		$form = $doc->query('form[method="post"]');
-		$values = $form->getFormValues();
-		$data = [
-			'email' => $this->auth->user,
-			'password' => $this->auth->pass,
-			// 'metadata1' => '',
-		] + $values;
-print_r($data);
+		$results = array_map(function($item) {
+			return SearchResult::fromJsonSearch($item);
+		}, $data['d']);
+		return array_values(array_filter($results));
+	}
 
-		usleep(rand(500, 1500));
-
-		$rsp = $this->guzzle->post('https://www.imdb.com/ap/signin', [
-			'form_data' => $data,
-		]);
-print_r($rsp);
-		$html = (string) $rsp->getBody();
-echo "$html\n\n\n\n================\n\n\n\n";
-// echo strip_tags($html);
+	public function logIn() : bool {
+		return $this->auth->logIn($this) && $this->checkSession();
 	}
 
 	protected function getOauthUrl( Node $doc ) {

@@ -4,7 +4,9 @@ namespace rdx\imdb;
 
 use GuzzleHttp\Cookie\CookieJar;
 
-class ImdbSessionAuth extends ImdbAuth {
+class AuthSession implements Auth {
+
+	protected $cookies;
 
 	public function __construct( $atMain, $ubidMain ) {
 		$this->cookies = new CookieJar(false, [
@@ -21,8 +23,12 @@ class ImdbSessionAuth extends ImdbAuth {
 		]);
 	}
 
-	public function needsLogin() : bool {
-		return false;
+	public function cookies() : CookieJar {
+		return $this->cookies;
+	}
+
+	public function logIn(Client $client) : bool {
+		return true;
 	}
 
 }
