@@ -1,0 +1,62 @@
+query GetTitle($titleId: ID!) {
+	title(id: $titleId) {
+		id
+		titleText {
+			text
+		}
+		akas(first: 2) {
+			edges {
+				node {
+					text
+				}
+			}
+		}
+		titleType {
+			text
+			canHaveEpisodes
+		}
+		ratingsSummary {
+			aggregateRating
+			voteCount
+		}
+		plots(first: 1) {
+			edges {
+				node {
+					plotText {
+						plainText
+					}
+				}
+			}
+		}
+		genres {
+			genres {
+				text
+			}
+		}
+		runtime {
+			seconds
+		}
+		releaseDate {
+			year
+			month
+			day
+		}
+		credits(first: 2) {
+			edges {
+				node {
+					name {
+						nameText {
+							text
+						}
+					}
+					category {
+						text
+					}
+				}
+			}
+		}
+		principalCredits {
+			totalCredits
+		}
+	}
+}

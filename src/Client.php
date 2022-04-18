@@ -26,19 +26,33 @@ class Client {
 		]);
 	}
 
-	public function checkSession() : bool {
-		$rsp = $this->get('https://www.imdb.com/_ajax/list/watchlist/count');
-		if ($rsp->getStatusCode() != 200) {
-			return false;
-		}
+	public function logIn() : bool {
+		return $this->auth->logIn($this) && $this->checkSession();
+	}
 
+	public function getGraphqlIntrospection() : array {
+		$rsp = $this->graphql(file_get_contents(__DIR__ . '/introspection.graphql'));
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
-		if (isset($data['count'])) {
-			$this->watchlist = new WatchlistMeta($data['count']);
-		}
+		unset($data['extensions']);
+		return $data;
+	}
 
-		return true;
+	public function getGraphqlTitle( string $id ) : Title {
+		$rsp = $this->graphql(file_get_contents(__DIR__ . '/title.graphql'), [
+			'titleId' => $id,
+		]);
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+		unset($data['extensions']);
+print_r($data);
+		$title = $data['data']['title'];
+		return new Title(
+			$title['id'],
+			$title['titleText']['text'],
+			year: $title['releaseDate']['year'],
+			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'],
+		);
 	}
 
 	public function getTitle( string $id ) : Title {
@@ -46,7 +60,15 @@ class Client {
 		$html = (string) $rsp->getBody();
 		$doc = Node::create($html);
 
-		return Title::fromDocument($id, $doc);
+		return Title::fromTitleDocument($id, $doc);
+	}
+
+	public function getTitleActors( string $id ) : array {
+		$rsp = $this->get("https://www.imdb.com/title/$id/fullcredits/");
+		$html = (string) $rsp->getBody();
+		$doc = Node::create($html);
+
+		return Actor::fromCreditsDocument($doc);
 	}
 
 	public function rateTitle( string $id, int $rating ) : bool {
@@ -66,6 +88,14 @@ class Client {
 		return $rsp->getStatusCode() == 200;
 	}
 
+	public function searchTitles( string $query ) : array {
+		return array_values(array_filter($this->search($query), fn($result) => $result instanceof Title));
+	}
+
+	public function searchPeople( string $query ) : array {
+		return array_values(array_filter($this->search($query), fn($result) => $result instanceof Person));
+	}
+
 	public function search( string $query ) : array {
 		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', strtolower($query))), '_');
 
@@ -74,24 +104,34 @@ class Client {
 		$rsp = $this->get($url);
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
-// print_r($data);
 
-		$results = array_map(function($item) {
-			return SearchResult::fromJsonSearch($item);
-		}, $data['d']);
+		$results = array_map([$this, 'makeSearchResult'], $data['d']);
 		return array_values(array_filter($results));
 	}
 
-	public function logIn() : bool {
-		return $this->auth->logIn($this) && $this->checkSession();
+	protected function makeSearchResult(array $item) : ?SearchResult {
+		if (preg_match('#^tt\d+#', $item['id'])) {
+			return Title::fromJsonSearch($item);
+		}
+		elseif (preg_match('#^nm\d+#', $item['id'])) {
+			return Person::fromJsonSearch($item);
+		}
+		return null;
 	}
 
-	protected function getOauthUrl( Node $doc ) {
-		foreach ( $doc->queryAll('#signin-options a.list-group-item') as $a ) {
-			if ( strpos($a['href'], 'https://www.imdb.com/ap/signin') === 0 ) {
-				return $a['href'];
-			}
+	protected function checkSession() : bool {
+		$rsp = $this->get('https://www.imdb.com/_ajax/list/watchlist/count');
+		if ($rsp->getStatusCode() != 200) {
+			return false;
 		}
+
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+		if (isset($data['count'])) {
+			$this->watchlist = new WatchlistMeta($data['count']);
+		}
+
+		return true;
 	}
 
 	protected function graphql( string $query, array $vars = [] ) : Response {

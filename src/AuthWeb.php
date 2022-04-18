@@ -59,4 +59,12 @@ echo "$html\n\n\n\n================\n\n\n\n";
 // echo strip_tags($html);
 	}
 
+	protected function getOauthUrl( Node $doc ) {
+		foreach ( $doc->queryAll('#signin-options a.list-group-item') as $a ) {
+			if ( strpos($a['href'], 'https://www.imdb.com/ap/signin') === 0 ) {
+				return $a['href'];
+			}
+		}
+	}
+
 }

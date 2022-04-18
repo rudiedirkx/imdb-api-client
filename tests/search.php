@@ -4,10 +4,14 @@ require 'inc.bootstrap.php';
 
 echo '"anna k": ';
 $results = $client->search('anna k');
-print_r(array_map('strval', $results));
+print_r($results);
 
-echo '"dumb & dumber": ';
-$results = $client->search('dumb & dumber');
-print_r(array_map('strval', $results));
+// echo '"anna k": ';
+// $results = $client->searchTitles('anna k');
+// print_r($results);
+
+// echo '"dumb & dumber": ';
+// $results = $client->searchPeople('dumb');
+// print_r($results);
 
 print_r($client->_requests);

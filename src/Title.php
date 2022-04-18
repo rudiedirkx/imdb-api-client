@@ -4,26 +4,40 @@ namespace rdx\imdb;
 
 use rdx\jsdom\Node;
 
-class Title {
+class Title implements SearchResult {
 
-	public $id;
-	public $name;
-	public $year;
-	public $description;
+	public function __construct(
+		public string $id,
+		public string $name,
+		public ?int $year = null,
+		public ?string $plot = null,
+		public ?string $searchInfo = null,
+	) {}
 
-	public function __construct(string $id, string $name, int $year, string $description) {
-		$this->id = $id;
-		$this->name = $name;
-		$this->year = $year;
-		$this->description = $description;
+	public function getSearchResult() : string {
+		return "[TITLE] $this->name ($this->year) ($this->searchInfo) [$this->id]";
 	}
 
-	static public function fromDocument(string $id, Node $doc) {
+	static public function fromJsonSearch(array $item) {
+		return new static(
+			$item['id'],
+			$item['l'],
+			year: $item['y'] ?? null,
+			searchInfo: $item['s'],
+		);
+	}
+
+	static public function fromTitleDocument(string $id, Node $doc) {
 		$h1 = $doc->query('h1');
 		$desc = $doc->query('[data-testid="plot-xl"]');
 		$year = static::getYear($id, $doc);
 
-		return new static($id, trim($h1->textContent), $year, trim($desc->textContent));
+		return new static(
+			$id,
+			$h1->textContent,
+			year: $year,
+			plot: $desc->textContent,
+		);
 	}
 
 	static protected function getYear(string $id, Node $doc) : ?int {
