@@ -7,7 +7,7 @@ class SearchResultTitle extends SearchResult {
 	public $year;
 	public $rank;
 
-	public function __construct(string $id, string $name, string $info, int $year, int $rank) {
+	public function __construct(string $id, string $name, string $info, ?int $year = null, ?int $rank = null) {
 		parent::__construct($id, $name, $info);
 		$this->year = $year;
 		$this->rank = $rank;
@@ -18,7 +18,7 @@ class SearchResultTitle extends SearchResult {
 	}
 
 	static public function fromJsonSearchItem(array $item) : self {
-		return new static($item['id'], $item['l'], $item['s'], $item['y'], $item['rank']);
+		return new static($item['id'], $item['l'], $item['s'], $item['y'] ?? null, $item['rank'] ?? null);
 	}
 
 }

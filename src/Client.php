@@ -41,6 +41,23 @@ class Client {
 		return true;
 	}
 
+	public function rateTitle( string $id, int $rating ) : bool {
+		$rsp = $this->graphql(<<<'GRAPHQL'
+		mutation UpdateTitleRating($rating: Int!, $titleId: ID!) {
+			rateTitle(input: {rating: $rating, titleId: $titleId}) {
+				rating {
+					value
+				}
+			}
+		}
+		GRAPHQL, [
+			'rating' => $rating,
+			'titleId' => $id,
+		]);
+
+		return $rsp->getStatusCode() == 200;
+	}
+
 	public function search( string $query ) : array {
 		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', strtolower($query))), '_');
 
@@ -49,6 +66,7 @@ class Client {
 		$rsp = $this->get($url);
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
+// print_r($data);
 
 		$results = array_map(function($item) {
 			return SearchResult::fromJsonSearch($item);
@@ -68,8 +86,20 @@ class Client {
 		}
 	}
 
+	protected function graphql( string $query, array $vars = [] ) : Response {
+		$url = 'https://api.graphql.imdb.com/';
+		$rsp = $this->guzzle->post($url, [
+			// 'headers' => ['Content-type' => 'application/json'],
+			'json' => ['query' => $query, 'variables' => $vars],
+		]);
+		return $this->rememberRequests($url, $rsp);
+	}
+
 	protected function get( string $url ) : Response {
-		$rsp = $this->guzzle->get($url);
+		return $this->rememberRequests($url, $this->guzzle->get($url));
+	}
+
+	protected function rememberRequests( string $url, Response $rsp ) : Response {
 		if (count($redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER))) {
 			$this->_requests[] = [$url, ...$redirects];
 		}
