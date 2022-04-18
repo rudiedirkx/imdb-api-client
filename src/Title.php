@@ -12,6 +12,9 @@ class Title implements SearchResult {
 		public ?int $year = null,
 		public ?string $plot = null,
 		public ?string $searchInfo = null,
+		public array $actors = [],
+		public ?float $rating = null,
+		public ?TitleRating $userRating = null,
 	) {}
 
 	public function getSearchResult() : string {
@@ -35,12 +38,16 @@ class Title implements SearchResult {
 		$h1 = $doc->query('h1');
 		$desc = $doc->query('[data-testid="plot-xl"]');
 		$year = static::getYear($id, $doc);
+		$rating = $doc->query('[data-testid="hero-rating-bar__aggregate-rating__score"]');
+		$actors = Actor::fromTitleDocument($doc);
 
 		return new static(
 			$id,
 			$h1->textContent,
 			year: $year,
 			plot: $desc->textContent,
+			rating: $rating ? (float) $rating->textContent : null,
+			actors: $actors,
 		);
 	}
 

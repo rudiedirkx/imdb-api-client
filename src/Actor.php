@@ -8,8 +8,30 @@ class Actor {
 
 	public function __construct(
 		public Person $person,
-		public Character $character,
+		public ?Character $character,
 	) {}
+
+	static public function fromGraphqlCredits(array $credits) : array {
+		return array_values(array_filter(array_map(function($node) {
+			return empty($node['node']['characters']) ? null : new static(
+				new Person($node['node']['name']['id'], $node['node']['name']['nameText']['text']),
+				new Character($node['node']['characters'][0]['name'] ?? null)
+			);
+		}, $credits)));
+	}
+
+	static public function fromTitleDocument(Node $doc) : array {
+		$actors = $doc->queryAll('[data-testid="title-cast-item"]');
+		$actors = array_map(function($el) {
+			$person = $el->query('a[data-testid="title-cast-item__actor"]');
+			$character = $el->query('.title-cast-item__characters-list a > span:first-child');
+			return new static(
+				new Person(Person::idFromHref($person['href']), $person->textContent),
+				new Character(preg_replace('#^as #', '', $character->textContent))
+			);
+		}, $actors);
+		return $actors;
+	}
 
 	static public function fromCreditsDocument(Node $doc) : array {
 		$rows = $doc->queryAll('table.cast_list tr');

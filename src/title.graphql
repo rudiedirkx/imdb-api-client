@@ -15,6 +15,9 @@ query GetTitle($titleId: ID!) {
 			text
 			canHaveEpisodes
 		}
+		userRating {
+			value
+		}
 		ratingsSummary {
 			aggregateRating
 			voteCount
@@ -36,27 +39,25 @@ query GetTitle($titleId: ID!) {
 		runtime {
 			seconds
 		}
-		releaseDate {
+		releaseYear {
 			year
-			month
-			day
 		}
-		credits(first: 2) {
+		credits(first: 20) {
 			edges {
 				node {
 					name {
+						id
 						nameText {
 							text
 						}
 					}
-					category {
-						text
+					... on Cast {
+						characters {
+							name
+						}
 					}
 				}
 			}
-		}
-		principalCredits {
-			totalCredits
 		}
 	}
 }

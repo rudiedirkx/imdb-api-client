@@ -45,13 +45,17 @@ class Client {
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
 		unset($data['extensions']);
-print_r($data);
+// print_r($data);
+
 		$title = $data['data']['title'];
 		return new Title(
 			$title['id'],
 			$title['titleText']['text'],
-			year: $title['releaseDate']['year'],
+			year: $title['releaseYear']['year'],
 			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'],
+			rating: $title['ratingsSummary']['aggregateRating'],
+			userRating: new TitleRating($title['id'], $title['userRating']['value'] ?? null),
+			actors: Actor::fromGraphqlCredits($title['credits']['edges']),
 		);
 	}
 
@@ -69,6 +73,25 @@ print_r($data);
 		$doc = Node::create($html);
 
 		return Actor::fromCreditsDocument($doc);
+	}
+
+	public function getTitleRating( string $id ) : TitleRating {
+		$rsp = $this->graphql(<<<'GRAPHQL'
+		query GetTitle($titleId: ID!) {
+			title(id: $titleId) {
+				id
+				userRating {
+					value
+				}
+			}
+		}
+		GRAPHQL, [
+			'titleId' => $id,
+		]);
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+
+		return new TitleRating($id, $data['data']['title']['userRating']['value'] ?? null);
 	}
 
 	public function rateTitle( string $id, int $rating ) : bool {
