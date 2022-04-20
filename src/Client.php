@@ -59,6 +59,30 @@ class Client {
 		);
 	}
 
+	public function inWatchlists( array $ids ) : array {
+		$rsp = $this->post('https://www.imdb.com/list/_ajax/watchlist_has',	[
+			'consts' => [implode(',', $ids)],
+			'tracking_tag' => 'watchlistRibbon',
+		]);
+		$json = (string) $rsp->getBody();
+echo "'$json\n\n";
+return [];
+		if ($this->watchlist) {
+			$this->watchlist->id = $data['list_id'];
+		}
+	}
+
+	public function inWatchlist( string $id ) : bool {
+	}
+
+	public function getLists() : array {
+		$rsp = $this->get("https://www.imdb.com/profile/lists/");
+		$html = (string) $rsp->getBody();
+		$doc = Node::create($html);
+
+		return ListMeta::fromListsDocument($doc);
+	}
+
 	public function getTitle( string $id ) : Title {
 		$rsp = $this->get("https://www.imdb.com/title/$id/");
 		$html = (string) $rsp->getBody();
@@ -151,7 +175,7 @@ class Client {
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
 		if (isset($data['count'])) {
-			$this->watchlist = new WatchlistMeta($data['count']);
+			$this->watchlist = new ListMeta(ListMeta::TYPE_WATCHLIST, 'Watchlist', $data['count']);
 		}
 
 		return true;
@@ -164,6 +188,12 @@ class Client {
 			'json' => ['query' => $query, 'variables' => $vars],
 		]);
 		return $this->rememberRequests($url, $rsp);
+	}
+
+	protected function post( string $url, array $input ) : Response {
+		return $this->rememberRequests($url, $this->guzzle->post($url, [
+			'form_params' => $input,
+		]));
 	}
 
 	protected function get( string $url ) : Response {
