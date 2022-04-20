@@ -11,7 +11,8 @@ class Person implements SearchResult {
 	) {}
 
 	public function getSearchResult() : string {
-		return "[PERSON] $this->name ($this->searchInfo) [$this->id]";
+		$info = $this->searchInfo ?? '...';
+		return "[PERSON] $this->name ($info)";
 	}
 
 	public function getUrl() : string {
@@ -22,7 +23,7 @@ class Person implements SearchResult {
 		return new static(
 			$item['id'],
 			$item['l'],
-			searchInfo: $item['s'],
+			searchInfo: $item['s'] ?? null,
 		);
 	}
 

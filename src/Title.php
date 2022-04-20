@@ -18,7 +18,9 @@ class Title implements SearchResult {
 	) {}
 
 	public function getSearchResult() : string {
-		return "[TITLE] $this->name ($this->year) ($this->searchInfo) [$this->id]";
+		$year = $this->year ?? '?';
+		$info = $this->searchInfo ?? '...';
+		return "[TITLE] $this->name ($year) ($info)";
 	}
 
 	public function getUrl() : string {
@@ -30,7 +32,7 @@ class Title implements SearchResult {
 			$item['id'],
 			$item['l'],
 			year: $item['y'] ?? null,
-			searchInfo: $item['s'],
+			searchInfo: $item['s'] ?? null,
 		);
 	}
 
