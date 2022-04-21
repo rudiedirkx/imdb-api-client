@@ -45,12 +45,13 @@ class Client {
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
 		unset($data['extensions']);
-// dump($data['data']['title']);
+// dump($data['data']['title'] ?? $data);
 
 		$title = $data['data']['title'];
 		return new Title(
 			$title['id'],
 			$title['titleText']['text'],
+			type: Title::typeFromTitleType($title['titleType']['id'] ?? ''),
 			year: $title['releaseYear']['year'] ?? null,
 			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,
 			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
@@ -153,7 +154,7 @@ return [];
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
 
-		$results = array_map([$this, 'makeSearchResult'], $data['d']);
+		$results = array_map([$this, 'makeSearchResult'], $data['d'] ?? []);
 		return array_values(array_filter($results));
 	}
 

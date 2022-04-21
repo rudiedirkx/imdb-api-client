@@ -12,6 +12,7 @@ query GetTitle($titleId: ID!) {
 			}
 		}
 		titleType {
+			id
 			text
 			canHaveEpisodes
 		}
