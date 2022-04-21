@@ -45,17 +45,17 @@ class Client {
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
 		unset($data['extensions']);
-// print_r($data);
+// dump($data['data']['title']);
 
 		$title = $data['data']['title'];
 		return new Title(
 			$title['id'],
 			$title['titleText']['text'],
-			year: $title['releaseYear']['year'],
-			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'],
-			rating: $title['ratingsSummary']['aggregateRating'],
+			year: $title['releaseYear']['year'] ?? null,
+			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,
+			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
 			userRating: new TitleRating($title['id'], $title['userRating']['value'] ?? null),
-			actors: Actor::fromGraphqlCredits($title['credits']['edges']),
+			actors: Actor::fromGraphqlCredits($title['credits']['edges'] ?? []),
 		);
 	}
 
