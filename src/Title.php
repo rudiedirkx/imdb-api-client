@@ -14,6 +14,7 @@ class Title implements SearchResult {
 		public ?string $searchInfo = null,
 		public array $actors = [],
 		public ?float $rating = null,
+		public ?int $ratings = null,
 		public ?TitleRating $userRating = null,
 	) {}
 

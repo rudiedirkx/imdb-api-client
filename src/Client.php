@@ -54,6 +54,7 @@ class Client {
 			year: $title['releaseYear']['year'] ?? null,
 			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,
 			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
+			ratings: $title['ratingsSummary']['voteCount'] ?? null,
 			userRating: new TitleRating($title['id'], $title['userRating']['value'] ?? null),
 			actors: Actor::fromGraphqlCredits($title['credits']['edges'] ?? []),
 		);
