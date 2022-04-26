@@ -38,7 +38,7 @@ class Client {
 		return $data;
 	}
 
-	public function getGraphqlTitle( string $id ) : Title {
+	public function getGraphqlTitle( string $id ) : ?Title {
 		$rsp = $this->graphql(file_get_contents(__DIR__ . '/title.graphql'), [
 			'titleId' => $id,
 		]);
@@ -46,6 +46,10 @@ class Client {
 		$data = json_decode($json, true);
 		unset($data['extensions']);
 // dump($data['data']['title'] ?? $data);
+
+		if (empty($data['data']['title']['titleText']['text']) || empty($data['data']['title']['titleType'])) {
+			return null;
+		}
 
 		$title = $data['data']['title'];
 		return new Title(
@@ -85,7 +89,7 @@ return [];
 		return ListMeta::fromListsDocument($doc);
 	}
 
-	public function getTitle( string $id ) : Title {
+	public function getTitle( string $id ) : ?Title {
 		$rsp = $this->get("https://www.imdb.com/title/$id/");
 		$html = (string) $rsp->getBody();
 		$doc = Node::create($html);

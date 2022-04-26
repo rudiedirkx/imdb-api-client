@@ -85,7 +85,7 @@ class Title implements SearchResult {
 		return null;
 	}
 
-	static public function fromJsonSearch(array $item) {
+	static public function fromJsonSearch(array $item) : Title {
 		return new static(
 			$item['id'],
 			$item['l'],
@@ -95,18 +95,23 @@ class Title implements SearchResult {
 		);
 	}
 
-	static public function fromTitleDocument(string $id, Node $doc) {
+	static public function fromTitleDocument(string $id, Node $doc) : ?Title {
 		$h1 = $doc->query('h1');
 		$desc = $doc->query('[data-testid="plot-xl"]');
 		$year = static::getYear($id, $doc);
 		$rating = $doc->query('[data-testid="hero-rating-bar__aggregate-rating__score"]');
 		$actors = Actor::fromTitleDocument($doc);
 
+		$genres = $doc->query('[data-testid="genres"]');
+		if (strpos($h1->textContent, '404') !== false || !$genres) {
+			return null;
+		}
+
 		return new static(
 			$id,
 			$h1->textContent,
 			year: $year,
-			plot: $desc->textContent,
+			plot: $desc->textContent ?? null,
 			rating: $rating ? (float) $rating->textContent : null,
 			actors: $actors,
 		);
