@@ -141,6 +141,24 @@ return [];
 		return $rsp->getStatusCode() == 200;
 	}
 
+	public function addTitleToWatchlist( string $id ) : bool {
+		$rsp = $this->put("https://www.imdb.com/watchlist/$id");
+		if ( $rsp->getStatusCode() != 200 ) return false;
+
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+		return $data && ($data['status'] ?? 0) == 200;
+	}
+
+	public function removeTitleFromWatchlist( string $id ) : bool {
+		$rsp = $this->delete("https://www.imdb.com/watchlist/$id");
+		if ( $rsp->getStatusCode() != 200 ) return false;
+
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+		return $data && ($data['status'] ?? 0) == 200;
+	}
+
 	public function searchTitles( string $query ) : array {
 		return array_values(array_filter($this->search($query), fn($result) => $result instanceof Title));
 	}
@@ -200,6 +218,14 @@ return [];
 		return $this->rememberRequests($url, $this->guzzle->post($url, [
 			'form_params' => $input,
 		]));
+	}
+
+	protected function put( string $url ) : Response {
+		return $this->rememberRequests($url, $this->guzzle->put($url));
+	}
+
+	protected function delete( string $url ) : Response {
+		return $this->rememberRequests($url, $this->guzzle->delete($url));
 	}
 
 	protected function get( string $url ) : Response {

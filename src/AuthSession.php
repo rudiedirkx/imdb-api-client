@@ -8,7 +8,7 @@ class AuthSession implements Auth {
 
 	protected $cookies;
 
-	public function __construct( $atMain, $ubidMain ) {
+	public function __construct(string $atMain, string $ubidMain) {
 		$this->cookies = new CookieJar(false, [
 			[
 				'Domain' => '.imdb.com',
