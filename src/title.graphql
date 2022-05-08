@@ -4,6 +4,11 @@ query GetTitle($titleId: ID!) {
 		titleText {
 			text
 		}
+		primaryImage {
+			url
+			width
+			height
+		}
 		akas(first: 2) {
 			edges {
 				node {

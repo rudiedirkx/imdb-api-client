@@ -9,6 +9,7 @@ class Person implements SearchResult {
 		public string $name,
 		public ?string $searchInfo = null,
 		public ?int $birthYear = null,
+		public ?Image $image = null,
 		public array $credits = [],
 	) {}
 

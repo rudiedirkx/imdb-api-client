@@ -52,6 +52,7 @@ class Client {
 			$name['id'],
 			$name['nameText']['text'],
 			birthYear: isset($name['birthDate']['date']) ? (int) $name['birthDate']['date'] : null,
+			image: Image::fromGraphql($name['primaryImage'] ?? []),
 			credits: Actor::fromGraphqlPersonCredits($name['credits']['edges'] ?? []),
 		);
 	}

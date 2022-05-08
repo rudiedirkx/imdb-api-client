@@ -7,7 +7,13 @@ query GetName($nameId: ID!) {
 		birthDate {
 			date
 		}
-		credits(first: 10) {
+		primaryImage {
+			url
+			width
+			height
+		}
+		# filter: {titles: ["tt0113957"]}
+		credits(first: 5, sort: {by: RELEASE_DATE, order: DESC}) {
 			total
 			edges {
 				node {

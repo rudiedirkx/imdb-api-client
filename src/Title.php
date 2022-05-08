@@ -29,6 +29,7 @@ class Title implements SearchResult {
 		public ?float $rating = null,
 		public ?int $ratings = null,
 		public ?TitleRating $userRating = null,
+		public ?Image $image = null,
 	) {}
 
 	public function getSearchResult() : string {
@@ -116,6 +117,7 @@ class Title implements SearchResult {
 			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
 			ratings: $title['ratingsSummary']['voteCount'] ?? null,
 			userRating: array_key_exists('userRating', $title) ? new TitleRating($title['id'], $title['userRating']['value'] ?? null) : null,
+			image: Image::fromGraphql($title['primaryImage'] ?? []),
 			actors: Actor::fromGraphqlTitleCredits($title['credits']['edges'] ?? []),
 		);
 	}
