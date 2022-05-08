@@ -8,6 +8,8 @@ class Person implements SearchResult {
 		public string $id,
 		public string $name,
 		public ?string $searchInfo = null,
+		public ?int $birthYear = null,
+		public array $credits = [],
 	) {}
 
 	public function getSearchResult() : string {

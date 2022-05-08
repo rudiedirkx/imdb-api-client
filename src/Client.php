@@ -38,6 +38,24 @@ class Client {
 		return $data;
 	}
 
+	public function getGraphqlPerson( string $id ) : ?Person {
+		$rsp = $this->graphql(file_get_contents(__DIR__ . '/name.graphql'), [
+			'nameId' => $id,
+		]);
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+		unset($data['extensions']);
+// dump($data['data']['name'] ?? $data);
+
+		$name = $data['data']['name'];
+		return new Person(
+			$name['id'],
+			$name['nameText']['text'],
+			birthYear: isset($name['birthDate']['date']) ? (int) $name['birthDate']['date'] : null,
+			credits: Actor::fromGraphqlPersonCredits($name['credits']['edges'] ?? []),
+		);
+	}
+
 	public function getGraphqlTitle( string $id ) : ?Title {
 		$rsp = $this->graphql(file_get_contents(__DIR__ . '/title.graphql'), [
 			'titleId' => $id,
@@ -51,18 +69,7 @@ class Client {
 			return null;
 		}
 
-		$title = $data['data']['title'];
-		return new Title(
-			$title['id'],
-			$title['titleText']['text'],
-			type: Title::typeFromTitleType($title['titleType']['id'] ?? ''),
-			year: $title['releaseYear']['year'] ?? null,
-			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,
-			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
-			ratings: $title['ratingsSummary']['voteCount'] ?? null,
-			userRating: new TitleRating($title['id'], $title['userRating']['value'] ?? null),
-			actors: Actor::fromGraphqlCredits($title['credits']['edges'] ?? []),
-		);
+		return Title::fromGraphqlNode($data['data']['title']);
 	}
 
 	public function inWatchlists( array $ids ) : array {
@@ -168,7 +175,8 @@ return [];
 	}
 
 	public function search( string $query ) : array {
-		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', strtolower($query))), '_');
+		$clean = str_replace(["'"], '', strtolower($query));
+		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', $clean)), '_');
 
 		$url = sprintf('https://v2.sg.media-imdb.com/suggestion/%s/%s.json', $clean[0], $clean);
 
@@ -205,7 +213,7 @@ return [];
 		return true;
 	}
 
-	protected function graphql( string $query, array $vars = [] ) : Response {
+	public function graphql( string $query, array $vars = [] ) : Response {
 		$url = 'https://api.graphql.imdb.com/';
 		$rsp = $this->guzzle->post($url, [
 			// 'headers' => ['Content-type' => 'application/json'],

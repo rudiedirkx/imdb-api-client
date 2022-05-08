@@ -1,0 +1,39 @@
+query GetName($nameId: ID!) {
+	name(id: $nameId) {
+		id
+		nameText {
+			text
+		}
+		birthDate {
+			date
+		}
+		credits(first: 10) {
+			total
+			edges {
+				node {
+					... on Cast {
+						characters {
+							name
+						}
+					}
+					title {
+						id
+						titleText {
+							text
+						}
+						titleType {
+							id
+						}
+						releaseYear {
+							year
+							endYear
+						}
+						# series {
+						# 	type
+						# }
+					}
+				}
+			}
+		}
+	}
+}

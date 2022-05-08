@@ -16,6 +16,9 @@ query GetTitle($titleId: ID!) {
 			text
 			canHaveEpisodes
 		}
+		# series {
+		# 	type
+		# }
 		userRating {
 			value
 		}
@@ -42,6 +45,7 @@ query GetTitle($titleId: ID!) {
 		}
 		releaseYear {
 			year
+			endYear
 		}
 		credits(first: 20) {
 			edges {

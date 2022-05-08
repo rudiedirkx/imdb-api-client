@@ -14,5 +14,8 @@ $client = new Client(
 	new AuthSession(IMDB_AT_MAIN, IMDB_UBID_MAIN)
 );
 
-echo 'logIn: ';
-var_dump($client->logIn());
+$loggedIn = $client->logIn();
+if (empty($_quiet)) {
+	echo 'logIn: ';
+	var_dump($loggedIn);
+}

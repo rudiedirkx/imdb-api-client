@@ -22,6 +22,7 @@ class Title implements SearchResult {
 		public string $name,
 		public ?int $type = null,
 		public ?int $year = null,
+		public ?int $endYear = null,
 		public ?string $plot = null,
 		public ?string $searchInfo = null,
 		public array $actors = [],
@@ -39,6 +40,14 @@ class Title implements SearchResult {
 
 	public function getTypeLabel() : ?string {
 		return $this->type && isset(self::TYPES[$this->type]) ? strtoupper(self::TYPES[$this->type]) : null;
+	}
+
+	public function getYearLabel() : ?string {
+		if ($this->year === null) return null;
+		if ($this->type === self::TYPE_SERIES) {
+			return $this->year . ' - ' . ($this->endYear ?? '?');
+		}
+		return $this->year;
 	}
 
 	public function getUrl() : string {
@@ -92,6 +101,22 @@ class Title implements SearchResult {
 			type: self::typeFromTitleType($item['q'] ?? ''),
 			year: $item['y'] ?? null,
 			searchInfo: $item['s'] ?? null,
+		);
+	}
+
+	static public function fromGraphqlNode(array $title) : Title {
+// dump($title);
+		return new static(
+			$title['id'],
+			$title['titleText']['text'],
+			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
+			year: $title['releaseYear']['year'] ?? null,
+			endYear: $title['releaseYear']['endYear'] ?? null,
+			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,
+			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
+			ratings: $title['ratingsSummary']['voteCount'] ?? null,
+			userRating: array_key_exists('userRating', $title) ? new TitleRating($title['id'], $title['userRating']['value'] ?? null) : null,
+			actors: Actor::fromGraphqlTitleCredits($title['credits']['edges'] ?? []),
 		);
 	}
 

@@ -7,15 +7,26 @@ use rdx\jsdom\Node;
 class Actor {
 
 	public function __construct(
-		public Person $person,
+		public ?Person $person,
 		public ?Character $character,
+		public ?Title $title = null,
 	) {}
 
-	static public function fromGraphqlCredits(array $credits) : array {
+	static public function fromGraphqlPersonCredits(array $credits) : array {
+		return array_values(array_filter(array_map(function($node) {
+			return empty($node['node']['characters']) ? null : new static(
+				null,
+				new Character($node['node']['characters'][0]['name']),
+				Title::fromGraphqlNode($node['node']['title']),
+			);
+		}, $credits)));
+	}
+
+	static public function fromGraphqlTitleCredits(array $credits) : array {
 		return array_values(array_filter(array_map(function($node) {
 			return empty($node['node']['characters']) ? null : new static(
 				new Person($node['node']['name']['id'], $node['node']['name']['nameText']['text']),
-				new Character($node['node']['characters'][0]['name'] ?? null)
+				new Character($node['node']['characters'][0]['name']),
 			);
 		}, $credits)));
 	}
