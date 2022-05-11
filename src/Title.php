@@ -24,6 +24,7 @@ class Title implements SearchResult {
 		public ?int $year = null,
 		public ?int $endYear = null,
 		public ?string $plot = null,
+		public ?int $duration = null,
 		public ?string $searchInfo = null,
 		public array $actors = [],
 		public ?float $rating = null,
@@ -37,6 +38,17 @@ class Title implements SearchResult {
 		$info = $this->searchInfo ?? '...';
 		$type = $this->getTypeLabel() ?? 'TITLE';
 		return "[$type] $this->name ($year) ($info)";
+	}
+
+	public function getDurationLabel() : ?string {
+		if ($this->duration === null) return null;
+
+		$m = round($this->duration / 60);
+		if ($m < 60) {
+			return $m . 'm';
+		}
+
+		return floor($m / 60) . 'h ' . ($m % 60) . 'm';
 	}
 
 	public function getTypeLabel() : ?string {
@@ -114,6 +126,7 @@ class Title implements SearchResult {
 			year: $title['releaseYear']['year'] ?? null,
 			endYear: $title['releaseYear']['endYear'] ?? null,
 			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,
+			duration: $title['runtime']['seconds'] ?? null,
 			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
 			ratings: $title['ratingsSummary']['voteCount'] ?? null,
 			userRating: array_key_exists('userRating', $title) ? new TitleRating($title['id'], $title['userRating']['value'] ?? null) : null,
