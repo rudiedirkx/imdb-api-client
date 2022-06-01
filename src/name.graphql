@@ -1,4 +1,4 @@
-query GetName($nameId: ID!) {
+query GetName($nameId: ID!, $numCredits : Int = 20) {
 	name(id: $nameId) {
 		id
 		nameText {
@@ -6,25 +6,24 @@ query GetName($nameId: ID!) {
 		}
 		birthDate {
 			date
+			dateComponents {
+				year
+			}
 		}
 		primaryImage {
 			url
 			width
 			height
 		}
-		# filter: {titles: ["tt0113957"]}
-		credits(first: 5, sort: {by: RELEASE_DATE, order: DESC}) {
-			total
+		credits: knownFor(first: $numCredits) {
 			edges {
 				node {
-					... on Cast {
-						characters {
-							name
-						}
-					}
 					title {
 						id
 						titleText {
+							text
+						}
+						originalTitleText {
 							text
 						}
 						titleType {
@@ -34,9 +33,15 @@ query GetName($nameId: ID!) {
 							year
 							endYear
 						}
-						# series {
-						# 	type
-						# }
+					}
+					summary {
+						principalCharacters {
+							name
+						}
+						yearRange {
+							year
+							endYear
+						}
 					}
 				}
 			}

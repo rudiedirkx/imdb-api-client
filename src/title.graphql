@@ -1,4 +1,4 @@
-query GetTitle($titleId: ID!) {
+query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 	title(id: $titleId) {
 		id
 		titleText {
@@ -52,7 +52,7 @@ query GetTitle($titleId: ID!) {
 			year
 			endYear
 		}
-		credits(first: 20) {
+		credits(first: $numCredits) {
 			edges {
 				node {
 					name {

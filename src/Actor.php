@@ -13,13 +13,15 @@ class Actor {
 	) {}
 
 	static public function fromGraphqlPersonCredits(array $credits) : array {
-		return array_values(array_filter(array_map(function($node) {
-			return empty($node['node']['characters']) ? null : new static(
+		$actors = array_values(array_filter(array_map(function($node) {
+			return empty($node['node']['summary']['principalCharacters']) ? null : new static(
 				null,
-				new Character($node['node']['characters'][0]['name']),
+				new Character($node['node']['summary']['principalCharacters'][0]['name']),
 				Title::fromGraphqlNode($node['node']['title']),
 			);
 		}, $credits)));
+		usort($actors, fn($a, $b) => $b->title->year <=> $a->title->year);
+		return $actors;
 	}
 
 	static public function fromGraphqlTitleCredits(array $credits) : array {

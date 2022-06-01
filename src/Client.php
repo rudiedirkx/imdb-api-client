@@ -51,7 +51,7 @@ class Client {
 		return new Person(
 			$name['id'],
 			$name['nameText']['text'],
-			birthYear: isset($name['birthDate']['date']) ? (int) $name['birthDate']['date'] : null,
+			birthYear: ((int) ($name['birthDate']['date'] ?? $name['birthDate']['dateComponents']['year'] ?? 0)) ?: null,
 			image: Image::fromGraphql($name['primaryImage'] ?? []),
 			credits: Actor::fromGraphqlPersonCredits($name['credits']['edges'] ?? []),
 		);
