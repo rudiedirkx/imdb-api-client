@@ -47,14 +47,7 @@ class Client {
 		unset($data['extensions']);
 // dump($data['data']['name'] ?? $data);
 
-		$name = $data['data']['name'];
-		return new Person(
-			$name['id'],
-			$name['nameText']['text'],
-			birthYear: ((int) ($name['birthDate']['date'] ?? $name['birthDate']['dateComponents']['year'] ?? 0)) ?: null,
-			image: Image::fromGraphql($name['primaryImage'] ?? []),
-			credits: Actor::fromGraphqlPersonCredits($name['credits']['edges'] ?? []),
-		);
+		return Person::fromGraphqlNode($data['data']['name']);
 	}
 
 	public function getGraphqlTitle( string $id ) : ?Title {

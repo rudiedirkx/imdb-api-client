@@ -60,6 +60,12 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 						nameText {
 							text
 						}
+						birthDate {
+							date
+							dateComponents {
+								year
+							}
+						}
 					}
 					... on Cast {
 						characters {

@@ -9,7 +9,7 @@ class Actor {
 	public function __construct(
 		public ?Person $person,
 		public ?Character $character,
-		public ?Title $title = null,
+		public ?Title $title,
 	) {}
 
 	static public function fromGraphqlPersonCredits(array $credits) : array {
@@ -27,8 +27,9 @@ class Actor {
 	static public function fromGraphqlTitleCredits(array $credits) : array {
 		return array_values(array_filter(array_map(function($node) {
 			return empty($node['node']['characters']) ? null : new static(
-				new Person($node['node']['name']['id'], $node['node']['name']['nameText']['text']),
+				Person::fromGraphqlNode($node['node']['name']),
 				new Character($node['node']['characters'][0]['name']),
+				null,
 			);
 		}, $credits)));
 	}
@@ -40,7 +41,8 @@ class Actor {
 			$character = $el->query('.title-cast-item__characters-list a > span:first-child');
 			return new static(
 				new Person(Person::idFromHref($person['href']), $person->textContent),
-				new Character(preg_replace('#^as #', '', $character->textContent))
+				new Character(preg_replace('#^as #', '', $character->textContent)),
+				null,
 			);
 		}, $actors);
 		return $actors;
@@ -59,7 +61,8 @@ class Actor {
 
 			$actors[] = new static(
 				new Person(Person::idFromHref($link['href']), $cells[1]->textContent),
-				new Character($charlink ? $charlink->textContent : $cells[3]->textContent)
+				new Character($charlink ? $charlink->textContent : $cells[3]->textContent),
+				null,
 			);
 		}
 

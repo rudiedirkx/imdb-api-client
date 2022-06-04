@@ -22,6 +22,16 @@ class Person implements SearchResult {
 		return "https://www.imdb.com/name/$this->id/";
 	}
 
+	static public function fromGraphqlNode(array $name) : Person {
+		return new Person(
+			$name['id'],
+			$name['nameText']['text'],
+			birthYear: ((int) ($name['birthDate']['date'] ?? $name['birthDate']['dateComponents']['year'] ?? 0)) ?: null,
+			image: Image::fromGraphql($name['primaryImage'] ?? []),
+			credits: Actor::fromGraphqlPersonCredits($name['credits']['edges'] ?? []),
+		);
+	}
+
 	static public function fromJsonSearch(array $item) {
 		return new static(
 			$item['id'],
