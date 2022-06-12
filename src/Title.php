@@ -10,11 +10,13 @@ class Title implements SearchResult {
 	const TYPE_SERIES = 2;
 	const TYPE_EPISODE = 3;
 	const TYPE_GAME = 4;
+	const TYPE_MUSIC = 5;
 	const TYPES = [
 		self::TYPE_MOVIE => 'movie',
 		self::TYPE_SERIES => 'series',
 		self::TYPE_EPISODE => 'episode',
 		self::TYPE_GAME => 'game',
+		self::TYPE_MUSIC => 'music',
 	];
 
 	public function __construct(
@@ -75,6 +77,7 @@ class Title implements SearchResult {
 			case 'tvShort':
 			case 'tvSpecial':
 			case 'tvMovie':
+			case 'video':
 			// JSON search `q`
 			case 'feature':
 			case 'TV movie':
@@ -102,6 +105,10 @@ class Title implements SearchResult {
 			case 'videoGame':
 			case 'video game':
 				return self::TYPE_GAME;
+
+			// GraphQL `titleType.id`
+			case 'musicVideo':
+				return self::TYPE_MUSIC;
 		}
 
 		return null;
