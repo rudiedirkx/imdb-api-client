@@ -23,6 +23,7 @@ class Title implements SearchResult {
 		public string $id,
 		public string $name,
 		public ?int $type = null,
+		public array $genres = [],
 		public ?int $year = null,
 		public ?int $endYear = null,
 		public ?string $plot = null,
@@ -114,6 +115,17 @@ class Title implements SearchResult {
 		return null;
 	}
 
+	static public function extractGraphqlGenres(array $genres) : array {
+		$names = [];
+		foreach ($genres['genres'] ?? [] as $genre) {
+			if (isset($genre['text'])) {
+				$names[] = $genre['text'];
+			}
+		}
+
+		return $names;
+	}
+
 	static public function fromJsonSearch(array $item) : Title {
 		return new static(
 			$item['id'],
@@ -130,6 +142,7 @@ class Title implements SearchResult {
 			$title['id'],
 			$title['titleText']['text'],
 			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
+			genres: self::extractGraphqlGenres($title['genres'] ?? []),
 			year: $title['releaseYear']['year'] ?? null,
 			endYear: $title['releaseYear']['endYear'] ?? null,
 			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,

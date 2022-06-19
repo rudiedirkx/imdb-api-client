@@ -21,6 +21,13 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 			text
 			canHaveEpisodes
 		}
+		genres {
+			... on Genres {
+				genres {
+					text
+				}
+			}
+		}
 		# series {
 		# 	type
 		# }
