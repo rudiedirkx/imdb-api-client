@@ -4,6 +4,9 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 		titleText {
 			text
 		}
+		originalTitleText {
+			text
+		}
 		primaryImage {
 			url
 			width

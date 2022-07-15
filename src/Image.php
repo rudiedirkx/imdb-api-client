@@ -34,4 +34,14 @@ class Image {
 		);
 	}
 
+	static public function fromJsonSearch(array $node) : ?Image {
+		if (empty($node['imageUrl'])) return null;
+
+		return new static(
+			$node['imageUrl'],
+			width: $node['width'] ?? null,
+			height: $node['height'] ?? null,
+		);
+	}
+
 }

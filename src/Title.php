@@ -22,6 +22,7 @@ class Title implements SearchResult {
 	public function __construct(
 		public string $id,
 		public string $name,
+		public ?string $originalName = null,
 		public ?int $type = null,
 		public array $genres = [],
 		public ?int $year = null,
@@ -34,7 +35,11 @@ class Title implements SearchResult {
 		public ?int $ratings = null,
 		public ?TitleRating $userRating = null,
 		public ?Image $image = null,
-	) {}
+	) {
+		if ($this->originalName === $this->name) {
+			$this->originalName = null;
+		}
+	}
 
 	public function getSearchResult() : string {
 		$year = $this->year ?? '?';
@@ -127,12 +132,14 @@ class Title implements SearchResult {
 	}
 
 	static public function fromJsonSearch(array $item) : Title {
+// dump($item);
 		return new static(
 			$item['id'],
 			$item['l'],
 			type: self::typeFromTitleType($item['q'] ?? ''),
 			year: $item['y'] ?? null,
 			searchInfo: $item['s'] ?? null,
+			image: Image::fromJsonSearch($item['i'] ?? []),
 		);
 	}
 
@@ -141,6 +148,7 @@ class Title implements SearchResult {
 		return new static(
 			$title['id'],
 			$title['titleText']['text'],
+			originalName: $title['originalTitleText']['text'],
 			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
 			genres: self::extractGraphqlGenres($title['genres'] ?? []),
 			year: $title['releaseYear']['year'] ?? null,
