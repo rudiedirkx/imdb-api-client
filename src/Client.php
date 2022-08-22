@@ -172,7 +172,7 @@ return [];
 		$clean = str_replace(["'"], '', strtolower($query));
 		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', $clean)), '_');
 
-		$url = sprintf('https://v2.sg.media-imdb.com/suggestion/%s/%s.json', $clean[0], $clean);
+		$url = sprintf('https://v3.sg.media-imdb.com/suggestion/x/%s.json', $clean);
 
 		$rsp = $this->get($url);
 		$json = (string) $rsp->getBody();
