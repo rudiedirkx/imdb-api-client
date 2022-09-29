@@ -101,6 +101,17 @@ return [];
 	public function getTitleActors( string $id ) : array {
 		$rsp = $this->get("https://www.imdb.com/title/$id/fullcredits/");
 		$html = (string) $rsp->getBody();
+
+		if (preg_match('#<table\s+[^>]+cast_list.+?>[\s\S]+?</table>#', $html, $match)) {
+			$html = <<<DOC
+				<!doctype html>
+				<html lang="en">
+				<head><meta charset="utf-8"></head>
+				<body>$match[0]</body>
+				</html>
+			DOC;
+		}
+
 		$doc = Node::create($html);
 
 		return Actor::fromCreditsDocument($doc);
