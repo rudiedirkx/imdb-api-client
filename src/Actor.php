@@ -26,9 +26,9 @@ class Actor {
 
 	static public function fromGraphqlTitleCredits(array $credits) : array {
 		return array_values(array_filter(array_map(function($node) {
-			return empty($node['node']['characters']) ? null : new static(
+			return new static(
 				Person::fromGraphqlNode($node['node']['name']),
-				new Character($node['node']['characters'][0]['name']),
+				new Character($node['node']['characters'][0]['name'] ?? '?'),
 				null,
 			);
 		}, $credits)));
