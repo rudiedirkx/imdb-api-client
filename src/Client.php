@@ -67,7 +67,7 @@ class Client {
 		return Title::fromGraphqlNode($data['data']['title']);
 	}
 
-	public function inWatchlists( array $ids ) : array {
+	public function titlesInWatchlist( array $ids ) : array {
 		$rsp = $this->post('https://www.imdb.com/list/_ajax/watchlist_has',	[
 			'consts' => [implode(',', $ids)],
 			'tracking_tag' => 'watchlistRibbon',
@@ -80,10 +80,10 @@ return [];
 		}
 	}
 
-	public function inWatchlist( string $id ) : bool {
+	public function titleInWatchlist( string $id ) : bool {
 
 		//
-		// Crazy & inefficient, BUT it works, unlike inWatchlists()
+		// Crazy & inefficient, BUT it works, unlike titlesInWatchlist()
 		//
 
 		$added = $this->addTitleToWatchlist($id);
@@ -254,30 +254,30 @@ return [];
 			// 'headers' => ['Content-type' => 'application/json'],
 			'json' => ['query' => $query, 'variables' => $vars],
 		]);
-		return $this->rememberRequests("POST $url", $rsp);
+		return $this->rememberRequests('POST', $url, $rsp);
 	}
 
 	protected function post( string $url, array $input ) : Response {
-		return $this->rememberRequests("POST $url", $this->guzzle->post($url, [
+		return $this->rememberRequests('POST', $url, $this->guzzle->post($url, [
 			'form_params' => $input,
 		]));
 	}
 
 	protected function put( string $url ) : Response {
-		return $this->rememberRequests("PUT $url", $this->guzzle->put($url));
+		return $this->rememberRequests('PUT', $url, $this->guzzle->put($url));
 	}
 
 	protected function delete( string $url ) : Response {
-		return $this->rememberRequests("DELETE $url", $this->guzzle->delete($url));
+		return $this->rememberRequests('DELETE', $url, $this->guzzle->delete($url));
 	}
 
 	protected function get( string $url ) : Response {
-		return $this->rememberRequests("GET $url", $this->guzzle->get($url));
+		return $this->rememberRequests('GET', $url, $this->guzzle->get($url));
 	}
 
-	protected function rememberRequests( string $url, Response $rsp ) : Response {
+	protected function rememberRequests( string $method, string $url, Response $rsp ) : Response {
 		if (count($redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER))) {
-			$this->_requests[] = [$url, ...$redirects];
+			$this->_requests[] = [$method, $url, ...$redirects];
 		}
 		else {
 			$this->_requests[] = [$url];

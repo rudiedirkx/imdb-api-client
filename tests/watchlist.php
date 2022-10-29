@@ -14,7 +14,7 @@ else {
 
 $id2 = 'tt4263482';
 echo "$id2 in watchlist: ";
-var_dump($client->inWatchlist($id2));
-// print_r($client->inWatchlists([$id, 'tt0086197', $id2, 'tt8772296']));
+var_dump($client->titleInWatchlist($id2));
+// print_r($client->titlesInWatchlist([$id, 'tt0086197', $id2, 'tt8772296']));
 
 print_r($client->_requests);
