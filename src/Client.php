@@ -6,6 +6,7 @@ use GuzzleHttp\Client as Guzzle;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RedirectMiddleware;
 use rdx\jsdom\Node;
+use RuntimeException;
 
 class Client {
 
@@ -80,6 +81,18 @@ return [];
 	}
 
 	public function inWatchlist( string $id ) : bool {
+
+		//
+		// Crazy & inefficient, BUT it works, unlike inWatchlists()
+		//
+
+		$added = $this->addTitleToWatchlist($id);
+		if ($added) {
+			$this->removeTitleFromWatchlist($id);
+			return false;
+		}
+
+		return true;
 	}
 
 	public function getLists() : array {
@@ -155,20 +168,37 @@ return [];
 
 	public function addTitleToWatchlist( string $id ) : bool {
 		$rsp = $this->put("https://www.imdb.com/watchlist/$id");
-		if ( $rsp->getStatusCode() != 200 ) return false;
+		if ( $rsp->getStatusCode() != 200 ) {
+			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
+		}
 
-		$json = (string) $rsp->getBody();
+		// {"list_id":"ls123456789","list_item_id":"234567890","status":200} = new
+		// {"list_id":"ls123456789","list_item_id":"0","status":200} = exists
+		$json = trim((string) $rsp->getBody());
+// echo "\n\n$json\n\n";
 		$data = json_decode($json, true);
-		return $data && ($data['status'] ?? 0) == 200;
+		if ( !$data || ($data['status'] ?? 0) != 200 ) {
+			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
+		}
+
+		return !empty($data['list_item_id']);
 	}
 
 	public function removeTitleFromWatchlist( string $id ) : bool {
 		$rsp = $this->delete("https://www.imdb.com/watchlist/$id");
-		if ( $rsp->getStatusCode() != 200 ) return false;
+		if ( $rsp->getStatusCode() != 200 ) {
+			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
+		}
 
-		$json = (string) $rsp->getBody();
+		// {"list_id":"ls123456789","status":200}
+		$json = trim((string) $rsp->getBody());
+// echo "\n\n$json\n\n";
 		$data = json_decode($json, true);
-		return $data && ($data['status'] ?? 0) == 200;
+		if ( !$data || ($data['status'] ?? 0) != 200 ) {
+			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
+		}
+
+		return true;
 	}
 
 	public function searchTitles( string $query ) : array {
@@ -224,25 +254,25 @@ return [];
 			// 'headers' => ['Content-type' => 'application/json'],
 			'json' => ['query' => $query, 'variables' => $vars],
 		]);
-		return $this->rememberRequests($url, $rsp);
+		return $this->rememberRequests("POST $url", $rsp);
 	}
 
 	protected function post( string $url, array $input ) : Response {
-		return $this->rememberRequests($url, $this->guzzle->post($url, [
+		return $this->rememberRequests("POST $url", $this->guzzle->post($url, [
 			'form_params' => $input,
 		]));
 	}
 
 	protected function put( string $url ) : Response {
-		return $this->rememberRequests($url, $this->guzzle->put($url));
+		return $this->rememberRequests("PUT $url", $this->guzzle->put($url));
 	}
 
 	protected function delete( string $url ) : Response {
-		return $this->rememberRequests($url, $this->guzzle->delete($url));
+		return $this->rememberRequests("DELETE $url", $this->guzzle->delete($url));
 	}
 
 	protected function get( string $url ) : Response {
-		return $this->rememberRequests($url, $this->guzzle->get($url));
+		return $this->rememberRequests("GET $url", $this->guzzle->get($url));
 	}
 
 	protected function rememberRequests( string $url, Response $rsp ) : Response {

@@ -12,6 +12,9 @@ else {
 	var_dump($client->removeTitleFromWatchlist($id));
 }
 
-print_r($client->inWatchlists([$id, 'tt0086197', 'tt4263482', 'tt8772296']));
+$id2 = 'tt4263482';
+echo "$id2 in watchlist: ";
+var_dump($client->inWatchlist($id2));
+// print_r($client->inWatchlists([$id, 'tt0086197', $id2, 'tt8772296']));
 
 print_r($client->_requests);
