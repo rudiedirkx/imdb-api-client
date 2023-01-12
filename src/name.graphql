@@ -33,6 +33,9 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 							year
 							endYear
 						}
+						userRating {
+							value
+						}
 					}
 					summary {
 						principalCharacters {
