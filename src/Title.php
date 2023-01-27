@@ -41,6 +41,14 @@ class Title implements SearchResult {
 		}
 	}
 
+	public function getSearchInfo() : string {
+		$actors = [];
+		foreach ($this->actors as $actor) {
+			$actors[] = $actor->person->name;
+		}
+		return implode(', ', $actors);
+	}
+
 	public function getSearchResult() : string {
 		$year = $this->year ?? '?';
 		$info = $this->searchInfo ?? '...';
@@ -148,7 +156,7 @@ class Title implements SearchResult {
 		return new static(
 			$title['id'],
 			$title['titleText']['text'],
-			originalName: $title['originalTitleText']['text'],
+			originalName: $title['originalTitleText']['text'] ?? null,
 			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
 			genres: self::extractGraphqlGenres($title['genres'] ?? []),
 			year: $title['releaseYear']['year'] ?? null,
@@ -159,7 +167,7 @@ class Title implements SearchResult {
 			ratings: $title['ratingsSummary']['voteCount'] ?? null,
 			userRating: array_key_exists('userRating', $title) ? new TitleRating($title['id'], $title['userRating']['value'] ?? null) : null,
 			image: Image::fromGraphql($title['primaryImage'] ?? []),
-			actors: Actor::fromGraphqlTitleCredits($title['credits']['edges'] ?? []),
+			actors: Actor::fromGraphqlTitleCredits($title['credits']['edges'] ?? $title['principalCredits'][0]['credits'] ?? []),
 		);
 	}
 

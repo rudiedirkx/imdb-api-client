@@ -1,0 +1,81 @@
+query search($query: String!, $first: Int! = 20) {
+	mainSearch(first: $first, options: {searchTerm: $query, type: [TITLE, NAME]}) {
+		edges {
+			node {
+				entity {
+					... on Title {
+						id
+						titleText {
+							text
+						}
+						originalTitleText {
+							text
+						}
+						titleType {
+							id
+							text
+							canHaveEpisodes
+						}
+						releaseYear {
+							year
+							endYear
+						}
+						primaryImage {
+							url
+							width
+							height
+						}
+						principalCredits(filter: {categories: ["cast"]}) {
+							credits(limit: 2) {
+								... on Cast {
+									name {
+										id
+										nameText {
+											text
+										}
+									}
+								}
+							}
+						}
+						userRating {
+							value
+						}
+						ratingsSummary {
+							aggregateRating
+							voteCount
+						}
+					}
+					... on Name {
+						id
+						nameText {
+							text
+						}
+						birthDate {
+							date
+							dateComponents {
+								year
+							}
+						}
+						primaryImage {
+							url
+							width
+							height
+						}
+						knownFor(first: 2) {
+							edges {
+								node {
+									title {
+										id
+										titleText {
+											text
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

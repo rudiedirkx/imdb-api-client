@@ -209,6 +209,28 @@ return [];
 		return array_values(array_filter($this->search($query), fn($result) => $result instanceof Person));
 	}
 
+	public function searchGraphql( string $query ) : array {
+		$rsp = $this->graphql(file_get_contents(__DIR__ . '/search.graphql'), [
+			'query' => $query,
+		]);
+		$json = (string) $rsp->getBody();
+		$data = json_decode($json, true);
+
+		$results = array_map([$this, 'makeGraphqlSearchResult'], $data['data']['mainSearch']['edges'] ?? []);
+		return array_values(array_filter($results));
+	}
+
+	protected function makeGraphqlSearchResult(array $item) : ?SearchResult {
+		$item = $item['node']['entity'];
+		if (preg_match('#^tt\d+#', $item['id'] ?? '')) {
+			return Title::fromGraphqlNode($item);
+		}
+		elseif (preg_match('#^nm\d+#', $item['id'] ?? '')) {
+			return Person::fromGraphqlNode($item);
+		}
+		return null;
+	}
+
 	public function search( string $query ) : array {
 		$clean = str_replace(["'"], '', strtolower($query));
 		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', $clean)), '_');
@@ -219,11 +241,11 @@ return [];
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
 
-		$results = array_map([$this, 'makeSearchResult'], $data['d'] ?? []);
+		$results = array_map([$this, 'makeJsonSearchResult'], $data['d'] ?? []);
 		return array_values(array_filter($results));
 	}
 
-	protected function makeSearchResult(array $item) : ?SearchResult {
+	protected function makeJsonSearchResult(array $item) : ?SearchResult {
 		if (preg_match('#^tt\d+#', $item['id'])) {
 			return Title::fromJsonSearch($item);
 		}

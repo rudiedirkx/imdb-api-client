@@ -13,6 +13,14 @@ class Person implements SearchResult {
 		public array $credits = [],
 	) {}
 
+	public function getSearchInfo() : string {
+		$titles = [];
+		foreach ($this->credits as $actor) {
+			$titles[] = $actor->title->name;
+		}
+		return implode(', ', $titles);
+	}
+
 	public function getSearchResult() : string {
 		$info = $this->searchInfo ?? '...';
 		return "[PERSON] $this->name ($info)";
@@ -28,7 +36,7 @@ class Person implements SearchResult {
 			$name['nameText']['text'],
 			birthYear: ((int) ($name['birthDate']['date'] ?? $name['birthDate']['dateComponents']['year'] ?? 0)) ?: null,
 			image: Image::fromGraphql($name['primaryImage'] ?? []),
-			credits: Actor::fromGraphqlPersonCredits($name['credits']['edges'] ?? []),
+			credits: Actor::fromGraphqlPersonCredits($name['knownFor']['edges'] ?? $name['credits']['edges'] ?? []),
 		);
 	}
 

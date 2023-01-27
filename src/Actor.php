@@ -13,13 +13,23 @@ class Actor {
 	) {}
 
 	static public function fromGraphqlPersonCredits(array $credits) : array {
-		$actors = array_values(array_filter(array_map(function($node) {
-			return empty($node['node']['summary']['principalCharacters']) ? null : new static(
-				null,
-				new Character($node['node']['summary']['principalCharacters'][0]['name']),
-				Title::fromGraphqlNode($node['node']['title']),
-			);
-		}, $credits)));
+		$actors = array_filter(array_map(function($node) {
+			if (!empty($node['node']['summary']['principalCharacters'])) {
+				return new static(
+					null,
+					new Character($node['node']['summary']['principalCharacters'][0]['name']),
+					Title::fromGraphqlNode($node['node']['title']),
+				);
+			}
+			elseif (!empty($node['node']['title'])) {
+				return new static(
+					null,
+					null,
+					Title::fromGraphqlNode($node['node']['title']),
+				);
+			}
+			return null;
+		}, $credits));
 		usort($actors, fn($a, $b) => $b->title->year <=> $a->title->year);
 		return $actors;
 	}
@@ -27,7 +37,7 @@ class Actor {
 	static public function fromGraphqlTitleCredits(array $credits) : array {
 		return array_values(array_filter(array_map(function($node) {
 			return new static(
-				Person::fromGraphqlNode($node['node']['name']),
+				Person::fromGraphqlNode($node['name'] ?? $node['node']['name']),
 				new Character($node['node']['characters'][0]['name'] ?? '?'),
 				null,
 			);
