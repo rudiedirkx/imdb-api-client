@@ -17,11 +17,11 @@ class Image {
 	}
 
 	public function getHeightForWidth(int $width) : ?int {
-		return $this->ratio === null ? null : $width / $this->ratio;
+		return $this->ratio === null ? null : round($width / $this->ratio);
 	}
 
 	public function getWidthForHeight(int $height) : ?int {
-		return $this->ratio === null ? null : $height * $this->ratio;
+		return $this->ratio === null ? null : round($height * $this->ratio);
 	}
 
 	static public function fromGraphql(array $node) : ?Image {

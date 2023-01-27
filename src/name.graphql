@@ -26,6 +26,11 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 						originalTitleText {
 							text
 						}
+						primaryImage {
+							url
+							width
+							height
+						}
 						titleType {
 							id
 						}
@@ -35,6 +40,10 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 						}
 						userRating {
 							value
+						}
+						ratingsSummary {
+							aggregateRating
+							voteCount
 						}
 					}
 					summary {
