@@ -1,5 +1,5 @@
-query search($query: String!, $first: Int! = 20) {
-	mainSearch(first: $first, options: {searchTerm: $query, type: [TITLE, NAME]}) {
+query search($query: String!, $first: Int! = 20, $types: [MainSearchType!]! = [TITLE, NAME]) {
+	mainSearch(first: $first, options: {searchTerm: $query, type: $types}) {
 		edges {
 			node {
 				entity {

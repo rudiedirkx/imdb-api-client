@@ -3,7 +3,7 @@
 require 'inc.bootstrap.php';
 
 echo '"anna k": ';
-$results = $client->search('anna k');
+$results = $client->searchGraphql('anna k');
 print_r($results);
 
 // echo '"anna k": ';

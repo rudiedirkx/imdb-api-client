@@ -209,12 +209,17 @@ return [];
 		return array_values(array_filter($this->search($query), fn($result) => $result instanceof Person));
 	}
 
-	public function searchGraphql( string $query ) : array {
+	public function searchGraphql( string $query, array $options = [] ) : array {
 		$rsp = $this->graphql(file_get_contents(__DIR__ . '/search.graphql'), [
 			'query' => $query,
+			'first' => $options['limit'] ?? 20,
+			'types' => $options['types'] ?? ['TITLE', 'NAME'],
 		]);
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
+		if (isset($data['errors'][0])) {
+			throw new GraphqlException($data['errors'][0]['message']);
+		}
 
 		$results = array_map([$this, 'makeGraphqlSearchResult'], $data['data']['mainSearch']['edges'] ?? []);
 		return array_values(array_filter($results));
