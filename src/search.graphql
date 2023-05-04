@@ -44,6 +44,15 @@ query search($query: String!, $first: Int! = 20, $types: [MainSearchType!]! = [T
 							aggregateRating
 							voteCount
 						}
+						plots(first: 1) {
+							edges {
+								node {
+									plotText {
+										plainText
+									}
+								}
+							}
+						}
 					}
 					... on Name {
 						id

@@ -44,9 +44,11 @@ class Client {
 			'nameId' => $id,
 		]);
 		$json = (string) $rsp->getBody();
-		$data = json_decode($json, true);
-		unset($data['extensions']);
-// dump($data['data']['name'] ?? $data);
+		$data = $this->unpackGraphqlJson($json);
+
+		if (empty($data['data']['name']['nameText']['text'])) {
+			return null;
+		}
 
 		return Person::fromGraphqlNode($data['data']['name']);
 	}
@@ -56,9 +58,7 @@ class Client {
 			'titleId' => $id,
 		]);
 		$json = (string) $rsp->getBody();
-		$data = json_decode($json, true);
-		unset($data['extensions']);
-// dump($data['data']['title'] ?? $data);
+		$data = $this->unpackGraphqlJson($json);
 
 		if (empty($data['data']['title']['titleText']['text']) || empty($data['data']['title']['titleType'])) {
 			return null;
@@ -216,10 +216,7 @@ return [];
 			'types' => $options['types'] ?? ['TITLE', 'NAME'],
 		]);
 		$json = (string) $rsp->getBody();
-		$data = json_decode($json, true);
-		if (isset($data['errors'][0])) {
-			throw new GraphqlException($data['errors'][0]['message']);
-		}
+		$data = $this->unpackGraphqlJson($json);
 
 		$results = array_map([$this, 'makeGraphqlSearchResult'], $data['data']['mainSearch']['edges'] ?? []);
 		return array_values(array_filter($results));
@@ -273,6 +270,19 @@ return [];
 		}
 
 		return true;
+	}
+
+	protected function unpackGraphqlJson( string $json ) : array {
+		$data = json_decode($json, true);
+		if (!$data) {
+			throw new RuntimeException(sprintf("Invalid JSON response: %s", substr($json, 0, 100)));
+		}
+
+		if (isset($data['errors'][0])) {
+			throw new GraphqlException($data['errors'][0]['message']);
+		}
+
+		return $data;
 	}
 
 	public function graphql( string $query, array $vars = [] ) : Response {
