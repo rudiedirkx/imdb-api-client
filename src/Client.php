@@ -32,19 +32,13 @@ class Client {
 	}
 
 	public function getGraphqlIntrospection() : array {
-		$rsp = $this->graphql(file_get_contents(__DIR__ . '/introspection.graphql'));
-		$json = (string) $rsp->getBody();
-		$data = json_decode($json, true);
-		unset($data['extensions']);
-		return $data;
+		return $this->graphqlData(file_get_contents(__DIR__ . '/introspection.graphql'));
 	}
 
 	public function getGraphqlPerson( string $id ) : ?Person {
-		$rsp = $this->graphql(file_get_contents(__DIR__ . '/name.graphql'), [
+		$data = $this->graphqlData(file_get_contents(__DIR__ . '/name.graphql'), [
 			'nameId' => $id,
 		]);
-		$json = (string) $rsp->getBody();
-		$data = $this->unpackGraphqlJson($json);
 
 		if (empty($data['data']['name']['nameText']['text'])) {
 			return null;
@@ -54,11 +48,9 @@ class Client {
 	}
 
 	public function getGraphqlTitle( string $id ) : ?Title {
-		$rsp = $this->graphql(file_get_contents(__DIR__ . '/title.graphql'), [
+		$data = $this->graphqlData(file_get_contents(__DIR__ . '/title.graphql'), [
 			'titleId' => $id,
 		]);
-		$json = (string) $rsp->getBody();
-		$data = $this->unpackGraphqlJson($json);
 
 		if (empty($data['data']['title']['titleText']['text']) || empty($data['data']['title']['titleType'])) {
 			return null;
@@ -131,7 +123,7 @@ return [];
 	}
 
 	public function getTitleRating( string $id ) : TitleRating {
-		$rsp = $this->graphql(<<<'GRAPHQL'
+		$data = $this->graphqlData(<<<'GRAPHQL'
 		query GetTitle($titleId: ID!) {
 			title(id: $titleId) {
 				id
@@ -143,8 +135,6 @@ return [];
 		GRAPHQL, [
 			'titleId' => $id,
 		]);
-		$json = (string) $rsp->getBody();
-		$data = json_decode($json, true);
 
 		return new TitleRating($id, $data['data']['title']['userRating']['value'] ?? null);
 	}
@@ -210,13 +200,11 @@ return [];
 	}
 
 	public function searchGraphql( string $query, array $options = [] ) : array {
-		$rsp = $this->graphql(file_get_contents(__DIR__ . '/search.graphql'), [
+		$data = $this->graphqlData(file_get_contents(__DIR__ . '/search.graphql'), [
 			'query' => $query,
 			'first' => $options['limit'] ?? 20,
 			'types' => $options['types'] ?? ['TITLE', 'NAME'],
 		]);
-		$json = (string) $rsp->getBody();
-		$data = $this->unpackGraphqlJson($json);
 
 		$results = array_map([$this, 'makeGraphqlSearchResult'], $data['data']['mainSearch']['edges'] ?? []);
 		return array_values(array_filter($results));
@@ -283,6 +271,12 @@ return [];
 		}
 
 		return $data;
+	}
+
+	public function graphqlData( string $query, array $vars = [] ) : array {
+		$rsp = $this->graphql($query, $vars);
+		$json = (string) $rsp->getBody();
+		return $this->unpackGraphqlJson($json);
 	}
 
 	public function graphql( string $query, array $vars = [] ) : Response {
