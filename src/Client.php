@@ -122,6 +122,29 @@ return [];
 		return Actor::fromCreditsDocument($doc);
 	}
 
+	public function getTitleRatingsMeta() : ?ListMeta {
+		$rsp = $this->get("https://www.imdb.com/list/ratings");
+		$html = (string) $rsp->getBody();
+		$dom = Node::create($html);
+		$el = $dom->query('.lister-list-length');
+
+		$redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER);
+		$userId = null;
+		if (count($redirects)) {
+			$url = end($redirects);
+			if (preg_match('#/user/(ur\d+)/ratings\b#', $url, $match)) {
+				$userId = $match[1];
+			}
+		}
+
+		if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
+			$count = (int) str_replace(',', '', $match[1]);
+			return $this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
+		}
+
+		return null;
+	}
+
 	public function getTitleRating( string $id ) : TitleRating {
 		$data = $this->graphqlData(<<<'GRAPHQL'
 		query GetTitle($titleId: ID!) {

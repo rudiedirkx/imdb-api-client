@@ -9,6 +9,7 @@ class ListMeta {
 	const TYPE_WATCHLIST = 1;
 	const TYPE_TITLES = 2;
 	const TYPE_PEOPLE = 3;
+	const TYPE_RATED = 4;
 
 	public function __construct(
 		public int $type,
