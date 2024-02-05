@@ -85,6 +85,27 @@ class Title implements SearchResult {
 		return "https://www.imdb.com/title/$this->id/";
 	}
 
+	static public function getIdFromHref(string $href) : ?string {
+		if (preg_match('#/title/(tt\d+)/#', $href, $match)) {
+			return $match[1];
+		}
+		return null;
+	}
+
+	static public function getDurationFromLabel(string $duration) : ?int {
+		if (preg_match('#^(\d+) hr (\d+) min$#', $duration, $match)) {
+			return $match[1] * 3600 + $match[2] * 60 + 1;
+		}
+		elseif (preg_match('#^(\d+) hr$#', $duration, $match)) {
+			return $match[1] * 3600 + 1;
+		}
+		elseif (preg_match('#^(\d+) min$#', $duration, $match)) {
+			return $match[1] * 60 + 1;
+		}
+
+		return null;
+	}
+
 	static public function typeFromTitleType(string $typeId) : ?int {
 		switch ($typeId) {
 			// GraphQL `titleType.id`
@@ -173,6 +194,27 @@ class Title implements SearchResult {
 			userRating: array_key_exists('userRating', $title) ? new TitleRating($title['id'], $title['userRating']['value'] ?? null) : null,
 			image: Image::fromGraphql($title['primaryImage'] ?? []),
 			actors: Actor::fromGraphqlTitleCredits($title['credits']['edges'] ?? $title['principalCredits'][0]['credits'] ?? []),
+		);
+	}
+
+	static public function fromListItem(Node $item) : ?Title {
+		$a = $item->query('a');
+		$img = $item->query('img');
+		$year = $item->query('.lister-item-year');
+		$rating = $item->query('input[name="rating"]');
+		$duration = $item->query('.runtime');
+
+		$year = (int) trim($year->textContent, 'I )(');
+
+		$ratedOn = preg_match('#Rated on (\d+ \w+ \d{4})#', $item->textContent, $match) ? strtotime($match[1]) : null;
+
+		return new static(
+			$id = static::getIdFromHref($a['href']),
+			$img['alt'],
+			year: $year ?: null,
+			duration: static::getDurationFromLabel($duration->textContent ?? ''),
+			userRating: new TitleRating($id, $rating['value'], ratedOn: $ratedOn),
+			image: new Image($img['loadlate']),
 		);
 	}
 

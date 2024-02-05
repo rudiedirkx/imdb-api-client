@@ -14,6 +14,7 @@ class Client {
 	protected $guzzle;
 	public $_requests = [];
 	public $watchlist;
+	public $ratedlist;
 
 	public function __construct( Auth $auth ) {
 		$this->auth = $auth;
@@ -123,10 +124,14 @@ return [];
 	}
 
 	public function getTitleRatingsMeta() : ?ListMeta {
+		$this->getTitleRatings();
+		return $this->ratedlist;
+	}
+
+	public function getTitleRatings() : array {
 		$rsp = $this->get("https://www.imdb.com/list/ratings");
 		$html = (string) $rsp->getBody();
 		$dom = Node::create($html);
-		$el = $dom->query('.lister-list-length');
 
 		$redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER);
 		$userId = null;
@@ -137,12 +142,20 @@ return [];
 			}
 		}
 
+		$el = $dom->query('.lister-list-length');
 		if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
 			$count = (int) str_replace(',', '', $match[1]);
-			return $this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
+			$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
 		}
 
-		return null;
+		$titles = [];
+		foreach ($dom->queryAll('.lister-item') as $item) {
+			if ($title = Title::fromListItem($item)) {
+				$titles[] = $title;
+			}
+		}
+
+		return $titles;
 	}
 
 	public function getTitleRating( string $id ) : TitleRating {
