@@ -15,36 +15,25 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 			width
 			height
 		}
-		credits: knownFor(first: $numCredits) {
+		credits(first: $numCredits, filter: {categories: ["actor"], productionStage: RELEASED}, sort: {by: RELEASE_DATE, order: DESC}) {
+			edges {
+				node {
+					... on Cast {
+						characters {
+							name
+						}
+					}
+					title {
+						...TitleDetails
+					}
+				}
+			}
+		}
+		knownFor(first: $numCredits) {
 			edges {
 				node {
 					title {
-						id
-						titleText {
-							text
-						}
-						originalTitleText {
-							text
-						}
-						primaryImage {
-							url
-							width
-							height
-						}
-						titleType {
-							id
-						}
-						releaseYear {
-							year
-							endYear
-						}
-						userRating {
-							value
-						}
-						ratingsSummary {
-							aggregateRating
-							voteCount
-						}
+						...TitleDetails
 					}
 					summary {
 						principalCharacters {
@@ -58,5 +47,34 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 				}
 			}
 		}
+	}
+}
+
+fragment TitleDetails on Title {
+	id
+	titleText {
+		text
+	}
+	originalTitleText {
+		text
+	}
+	primaryImage {
+		url
+		width
+		height
+	}
+	titleType {
+		id
+	}
+	releaseYear {
+		year
+		endYear
+	}
+	userRating {
+		value
+	}
+	ratingsSummary {
+		aggregateRating
+		voteCount
 	}
 }

@@ -36,7 +36,7 @@ class Person implements SearchResult {
 			$name['nameText']['text'],
 			birthYear: ((int) ($name['birthDate']['date'] ?? $name['birthDate']['dateComponents']['year'] ?? 0)) ?: null,
 			image: Image::fromGraphql($name['primaryImage'] ?? []),
-			credits: Actor::fromGraphqlPersonCredits($name['knownFor']['edges'] ?? $name['credits']['edges'] ?? []),
+			credits: Actor::fromGraphqlPersonCreditsAndKnownFor($name['credits']['edges'] ?? [], $name['knownFor']['edges'] ?? []),
 		);
 	}
 

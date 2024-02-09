@@ -10,27 +10,56 @@ class Actor {
 		public ?Person $person,
 		public ?Character $character,
 		public ?Title $title,
+		public ?string $source = null,
 	) {}
 
-	static public function fromGraphqlPersonCredits(array $credits) : array {
-		$actors = array_filter(array_map(function($node) {
-			if (!empty($node['node']['summary']['principalCharacters'])) {
-				return new static(
-					null,
-					new Character($node['node']['summary']['principalCharacters'][0]['name']),
-					Title::fromGraphqlNode($node['node']['title']),
-				);
+	static protected function fromGraphqlPerson(array $node) : ?static {
+		if (!empty($node['summary']['principalCharacters'])) {
+			return new static(
+				null,
+				new Character($node['summary']['principalCharacters'][0]['name']),
+				Title::fromGraphqlNode($node['title']),
+			);
+		}
+
+		if (!empty($node['characters'])) {
+			return new static(
+				null,
+				new Character($node['characters'][0]['name']),
+				Title::fromGraphqlNode($node['title']),
+			);
+		}
+
+		if (!empty($node['title'])) {
+			return new static(
+				null,
+				null,
+				Title::fromGraphqlNode($node['title']),
+			);
+		}
+
+		return null;
+	}
+
+	static public function fromGraphqlPersonCreditsAndKnownFor(array $credits, array $knownFor) : array {
+		$actors = [];
+
+		foreach ($credits as $edge) {
+			if ($actor = static::fromGraphqlPerson($edge['node'])) {
+				$actor->source = 'credits';
+				$actors[$actor->title->id] = $actor;
 			}
-			elseif (!empty($node['node']['title'])) {
-				return new static(
-					null,
-					null,
-					Title::fromGraphqlNode($node['node']['title']),
-				);
+		}
+
+		foreach ($knownFor as $edge) {
+			if ($actor = static::fromGraphqlPerson($edge['node'])) {
+				$actor->source = 'knownFor';
+				$actors[$actor->title->id] = $actor;
 			}
-			return null;
-		}, $credits));
+		}
+
 		usort($actors, fn($a, $b) => $b->title->year <=> $a->title->year);
+
 		return $actors;
 	}
 
