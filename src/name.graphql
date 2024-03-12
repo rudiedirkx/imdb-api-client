@@ -15,7 +15,7 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 			width
 			height
 		}
-		credits(first: $numCredits, filter: {categories: ["actor"], productionStage: RELEASED}, sort: {by: RELEASE_DATE, order: DESC}) {
+		credits(first: $numCredits, filter: {categories: ["actor", "actress"], productionStage: RELEASED}, sort: {by: RELEASE_DATE, order: DESC}) {
 			edges {
 				node {
 					... on Cast {
