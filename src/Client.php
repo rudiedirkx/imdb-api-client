@@ -22,6 +22,9 @@ class Client {
 		$this->guzzle = new Guzzle([
 			'http_errors' => false,
 			'cookies' => $auth->cookies(),
+			'headers' => [
+				'User-agent' => 'imdb/1.1',
+			],
 			'allow_redirects' => [
 				'track_redirects' => true,
 			] + RedirectMiddleware::$defaultSettings,
@@ -129,11 +132,20 @@ return [];
 	}
 
 	public function getTitleRatings() : array {
-		$rsp = $this->get("https://www.imdb.com/list/ratings");
-		$html = (string) $rsp->getBody();
+		if (file_exists($debugFilepath = __DIR__ . '/imdb-ratings.html')) {
+			$html = file_get_contents($debugFilepath);
+
+			$redirects = [];
+		}
+		else {
+			$rsp = $this->get("https://www.imdb.com/list/ratings");
+			$html = (string) $rsp->getBody();
+			// file_put_contents($debugFilepath, $html);
+
+			$redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER);
+		}
 		$dom = Node::create($html);
 
-		$redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER);
 		$userId = null;
 		if (count($redirects)) {
 			$url = end($redirects);
@@ -142,20 +154,45 @@ return [];
 			}
 		}
 
+		// Old
 		$el = $dom->query('.lister-list-length');
-		if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
-			$count = (int) str_replace(',', '', $match[1]);
-			$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
-		}
-
-		$titles = [];
-		foreach ($dom->queryAll('.lister-item') as $item) {
-			if ($title = Title::fromListItem($item)) {
-				$titles[] = $title;
+		if ($el) {
+			if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
+				$count = (int) str_replace(',', '', $match[1]);
+				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
 			}
+
+			$titles = [];
+			foreach ($dom->queryAll('.lister-item') as $item) {
+				if ($title = Title::fromListItem($item)) {
+					$titles[] = $title;
+				}
+			}
+
+			return $titles;
 		}
 
-		return $titles;
+		// New
+		$el = $dom->query('[data-testid="list-page-mc-total-items"]');
+		if ($el) {
+			if (preg_match('#^([\d,]+) titles#', $el->textContent, $match)) {
+				$count = (int) str_replace(',', '', $match[1]);
+				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
+			}
+
+			$titles = [];
+			foreach ($dom->queryAll('.ipc-metadata-list-summary-item') as $item) {
+				if ($title = Title::fromListItemNew($item)) {
+					$titles[] = $title;
+				}
+			}
+
+			// @todo Load ratings with GraphQL with UserRatingsAndWatchOptions query
+
+			return $titles;
+		}
+
+		return [];
 	}
 
 	public function getTitleRating( string $id ) : TitleRating {

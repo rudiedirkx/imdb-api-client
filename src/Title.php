@@ -93,13 +93,13 @@ class Title implements SearchResult {
 	}
 
 	static public function getDurationFromLabel(string $duration) : ?int {
-		if (preg_match('#^(\d+) hr (\d+) min$#', $duration, $match)) {
+		if (preg_match('#^(\d+)(?:h| hr) (\d+)(?:m| min)$#', $duration, $match)) {
 			return $match[1] * 3600 + $match[2] * 60 + 1;
 		}
-		elseif (preg_match('#^(\d+) hr$#', $duration, $match)) {
+		elseif (preg_match('#^(\d+)(?:h| hr)$#', $duration, $match)) {
 			return $match[1] * 3600 + 1;
 		}
-		elseif (preg_match('#^(\d+) min$#', $duration, $match)) {
+		elseif (preg_match('#^(\d+)(?:m| min)$#', $duration, $match)) {
 			return $match[1] * 60 + 1;
 		}
 
@@ -194,6 +194,30 @@ class Title implements SearchResult {
 			userRating: array_key_exists('userRating', $title) ? new TitleRating($title['id'], $title['userRating']['value'] ?? null) : null,
 			image: Image::fromGraphql($title['primaryImage'] ?? []),
 			actors: Actor::fromGraphqlTitleCredits($title['credits']['edges'] ?? $title['principalCredits'][0]['credits'] ?? []),
+		);
+	}
+
+	static public function fromListItemNew(Node $item) : ?Title {
+		$a = $item->query('a');
+		$title = $item->query('.ipc-title__text');
+		$img = $item->query('img');
+		$metas = $item->queryAll('.dli-title-metadata-item');
+		$year = $duration = null;
+		foreach ($metas as $meta) {
+			if (!$year) {
+				$year = preg_match('#^\d{4}$#', $metas[0]->textContent) ? (int) $meta->textContent : null;
+			}
+			if (!$duration) {
+				$duration = static::getDurationFromLabel($meta->textContent);
+			}
+		}
+
+		return new static(
+			$id = static::getIdFromHref($a['href']),
+			preg_replace('#^\d+\. #', '', $title->textContent),
+			year: $year,
+			duration: $duration,
+			image: new Image($img['src']),
 		);
 	}
 
