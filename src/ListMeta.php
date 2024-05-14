@@ -11,11 +11,15 @@ class ListMeta {
 	const TYPE_PEOPLE = 3;
 	const TYPE_RATED = 4;
 
+	const VERSION_2023 = 1;
+	const VERSION_2024 = 2;
+
 	public function __construct(
 		public int $type,
 		public string $name,
 		public int $count,
 		public ?string $id = null,
+		public ?int $version = null,
 	) {}
 
 	static public function fromListsDocument(Node $doc) : array {

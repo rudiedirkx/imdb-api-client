@@ -2,6 +2,7 @@
 
 namespace rdx\imdb;
 
+use Exception;
 use GuzzleHttp\Client as Guzzle;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RedirectMiddleware;
@@ -9,6 +10,11 @@ use rdx\jsdom\Node;
 use RuntimeException;
 
 class Client {
+
+	static public array $userRatingsPersistedQuery = [
+		'version' => 1,
+		'sha256Hash' => '9672397d6bf156302f8f61e7ede2750222bd2689e65e21cfedc5abd5ca0f4aea',
+	];
 
 	protected $auth;
 	protected $guzzle;
@@ -159,7 +165,7 @@ return [];
 		if ($el) {
 			if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
 				$count = (int) str_replace(',', '', $match[1]);
-				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
+				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId, version: ListMeta::VERSION_2023);
 			}
 
 			$titles = [];
@@ -177,7 +183,7 @@ return [];
 		if ($el) {
 			if (preg_match('#^([\d,]+) titles#', $el->textContent, $match)) {
 				$count = (int) str_replace(',', '', $match[1]);
-				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId);
+				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId, version: ListMeta::VERSION_2024);
 			}
 
 			$titles = [];
@@ -187,7 +193,40 @@ return [];
 				}
 			}
 
-			// @todo Load ratings with GraphQL with UserRatingsAndWatchOptions query
+			$body = [
+				'operationName' => 'UserRatingsAndWatchOptions',
+				'variables' => [
+					'locale' => 'en-US',
+					'idArray' => array_column($titles, 'id'),
+					'includeUserRating' => true,
+					'location' => [
+						'latLong' => [
+							'lat' => '52.35',
+							'long' => '4.89',
+						],
+					],
+					'fetchOtherUserRating' => false,
+				],
+				'extensions' => [
+					'persistedQuery' => static::$userRatingsPersistedQuery,
+				],
+			];
+			try {
+				$rsp = $this->graphqlRaw($body);
+				$json = (string) $rsp->getBody();
+				$data = $this->unpackGraphqlJson($json);
+
+				$ratings = array_column($data['data']['titles'], 'userRating', 'id');
+				foreach ($titles as $title) {
+					if (isset($ratings[$title->id])) {
+						$rating = $ratings[$title->id];
+						$title->userRating = new TitleRating($title->id, $rating['value'], ratedOn: strtotime($rating['date']));
+					}
+				}
+			}
+			catch (Exception $ex) {
+				// Ignore
+			}
 
 			return $titles;
 		}
@@ -353,10 +392,14 @@ return [];
 	}
 
 	public function graphql( string $query, array $vars = [] ) : Response {
+		return $this->graphqlRaw(['query' => $query, 'variables' => $vars]);
+	}
+
+	protected function graphqlRaw( array $body = [] ) : Response {
 		$url = 'https://api.graphql.imdb.com/';
 		$rsp = $this->guzzle->post($url, [
 			// 'headers' => ['Content-type' => 'application/json'],
-			'json' => ['query' => $query, 'variables' => $vars],
+			'json' => $body,
 		]);
 		return $this->rememberRequests('POST', $url, $rsp);
 	}
