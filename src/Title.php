@@ -197,7 +197,7 @@ class Title implements SearchResult {
 		);
 	}
 
-	static public function fromListItemNew(Node $item) : ?Title {
+	static public function fromListItem2024(Node $item) : ?Title {
 		$a = $item->query('a');
 		$title = $item->query('.ipc-title__text');
 		$img = $item->query('img');
@@ -221,7 +221,7 @@ class Title implements SearchResult {
 		);
 	}
 
-	static public function fromListItem(Node $item) : ?Title {
+	static public function fromListItem2023(Node $item) : ?Title {
 		$a = $item->query('a');
 		$img = $item->query('img');
 		$year = $item->query('.lister-item-year');

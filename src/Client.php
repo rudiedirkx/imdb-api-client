@@ -160,7 +160,7 @@ return [];
 			}
 		}
 
-		// Old
+		// Old 2023
 		$el = $dom->query('.lister-list-length');
 		if ($el) {
 			if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
@@ -170,7 +170,7 @@ return [];
 
 			$titles = [];
 			foreach ($dom->queryAll('.lister-item') as $item) {
-				if ($title = Title::fromListItem($item)) {
+				if ($title = Title::fromListItem2023($item)) {
 					$titles[] = $title;
 				}
 			}
@@ -178,60 +178,81 @@ return [];
 			return $titles;
 		}
 
-		// New
-		$el = $dom->query('[data-testid="list-page-mc-total-items"]');
+		$titles = [];
+
+		// New 2024
+		// ~250 from JSON
+		$el = $dom->query('script#__NEXT_DATA__');
 		if ($el) {
-			if (preg_match('#^([\d,]+) titles#', $el->textContent, $match)) {
-				$count = (int) str_replace(',', '', $match[1]);
-				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId, version: ListMeta::VERSION_2024);
-			}
-
-			$titles = [];
-			foreach ($dom->queryAll('.ipc-metadata-list-summary-item') as $item) {
-				if ($title = Title::fromListItemNew($item)) {
-					$titles[] = $title;
-				}
-			}
-
-			$body = [
-				'operationName' => 'UserRatingsAndWatchOptions',
-				'variables' => [
-					'locale' => 'en-US',
-					'idArray' => array_column($titles, 'id'),
-					'includeUserRating' => true,
-					'location' => [
-						'latLong' => [
-							'lat' => '52.35',
-							'long' => '4.89',
-						],
-					],
-					'fetchOtherUserRating' => false,
-				],
-				'extensions' => [
-					'persistedQuery' => static::$userRatingsPersistedQuery,
-				],
-			];
-			try {
-				$rsp = $this->graphqlRaw($body);
-				$json = (string) $rsp->getBody();
-				$data = $this->unpackGraphqlJson($json);
-
-				$ratings = array_column($data['data']['titles'], 'userRating', 'id');
-				foreach ($titles as $title) {
-					if (isset($ratings[$title->id])) {
-						$rating = $ratings[$title->id];
-						$title->userRating = new TitleRating($title->id, $rating['value'], ratedOn: strtotime($rating['date']));
+			$json = $el->textContent;
+			$data = json_decode($json, true);
+			if (isset($data['props']['pageProps']['mainColumnData']['advancedTitleSearch']['edges'][0]['node'])) {
+				$advancedTitleSearch = $data['props']['pageProps']['mainColumnData']['advancedTitleSearch'];
+				$count = $advancedTitleSearch['total'];
+				foreach (array_slice($advancedTitleSearch['edges'], 0, 150) as $edge) {
+					if ($title = Title::fromGraphqlNode($edge['node']['title'])) {
+						$titles[] = $title;
 					}
 				}
 			}
-			catch (Exception $ex) {
-				// Ignore
-			}
-
-			return $titles;
 		}
 
-		return [];
+		if (!count($titles)) {
+			// ~25 from HTML
+			$el = $dom->query('[data-testid="list-page-mc-total-items"]');
+			if ($el) {
+				if (preg_match('#^([\d,]+) titles#', $el->textContent, $match)) {
+					$count = (int) str_replace(',', '', $match[1]);
+					$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId, version: ListMeta::VERSION_2024);
+				}
+
+				foreach ($dom->queryAll('.ipc-metadata-list-summary-item') as $item) {
+					if ($title = Title::fromListItem2024($item)) {
+						$titles[] = $title;
+					}
+				}
+			}
+		}
+
+		if (!count($titles)) return [];
+
+		// Plus GraphQL data
+		$body = [
+			'operationName' => 'UserRatingsAndWatchOptions',
+			'variables' => [
+				'locale' => 'en-US',
+				'idArray' => array_column($titles, 'id'),
+				'includeUserRating' => true,
+				'location' => [
+					'latLong' => [
+						'lat' => '52.35',
+						'long' => '4.89',
+					],
+				],
+				'fetchOtherUserRating' => false,
+			],
+			'extensions' => [
+				'persistedQuery' => static::$userRatingsPersistedQuery,
+			],
+		];
+		try {
+			$rsp = $this->graphqlRaw($body);
+			$json = (string) $rsp->getBody();
+			$data = $this->unpackGraphqlJson($json);
+
+			$ratings = array_column($data['data']['titles'], 'userRating', 'id');
+			foreach ($titles as $title) {
+				if (isset($ratings[$title->id])) {
+					$rating = $ratings[$title->id];
+					$title->userRating = new TitleRating($title->id, $rating['value'], ratedOn: strtotime($rating['date']));
+				}
+			}
+		}
+		catch (Exception $ex) {
+			// Ignore
+		}
+
+		return $titles;
 	}
 
 	public function getTitleRating( string $id ) : TitleRating {

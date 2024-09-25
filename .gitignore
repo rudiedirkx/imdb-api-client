@@ -2,3 +2,4 @@
 /vendor/
 /env.php
 /_project/
+/tests/graphiql/
