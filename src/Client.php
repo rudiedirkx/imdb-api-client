@@ -30,6 +30,7 @@ class Client {
 			'cookies' => $auth->cookies(),
 			'headers' => [
 				'User-agent' => 'imdb/1.1',
+				// 'User-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
 			],
 			'allow_redirects' => [
 				'track_redirects' => true,
@@ -71,30 +72,31 @@ class Client {
 
 	public function titlesInWatchlist( array $ids ) : array {
 		$rsp = $this->post('https://www.imdb.com/list/_ajax/watchlist_has',	[
-			'consts' => [implode(',', $ids)],
+			'consts[]' => implode(',', $ids) . ',',
 			'tracking_tag' => 'watchlistRibbon',
 		]);
 		$json = (string) $rsp->getBody();
-echo "'$json\n\n";
-return [];
-		if ($this->watchlist) {
+
+		// tt28015403 in watchlist:
+		// {"extra":{"name":"49e6c","value":"4c41"},"has":{"tt28015403":[-1345345678]},"list_id":"ls000529936","status":200}
+		// not in watchlist:
+		// {"extra":{"name":"49e6c","value":"25c5"},"has":{},"list_id":"ls000529936","status":200}
+
+		$data = json_decode($json, true);
+		if ( !$data || ($data['status'] ?? 0) !== 200 || !is_array($data['has'] ?? null) ) {
+			throw new RuntimeException(sprintf('Unexpected watchlist_has response: %s', substr($json, 0, 300)));
+		}
+
+		if ( $this->watchlist && is_string($data['list_id'] ?? null) ) {
 			$this->watchlist->id = $data['list_id'];
 		}
+
+		return array_keys($data['has']);
 	}
 
 	public function titleInWatchlist( string $id ) : bool {
-
-		//
-		// Crazy & inefficient, BUT it works, unlike titlesInWatchlist()
-		//
-
-		$added = $this->addTitleToWatchlist($id);
-		if ($added) {
-			$this->removeTitleFromWatchlist($id);
-			return false;
-		}
-
-		return true;
+		$hasIds = $this->titlesInWatchlist([$id]);
+		return in_array($id, $hasIds);
 	}
 
 	public function getLists() : array {
@@ -300,7 +302,7 @@ return [];
 		$json = trim((string) $rsp->getBody());
 // echo "\n\n$json\n\n";
 		$data = json_decode($json, true);
-		if ( !$data || ($data['status'] ?? 0) != 200 ) {
+		if ( !$data || ($data['status'] ?? 0) !== 200 ) {
 			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
 		}
 
@@ -317,7 +319,7 @@ return [];
 		$json = trim((string) $rsp->getBody());
 // echo "\n\n$json\n\n";
 		$data = json_decode($json, true);
-		if ( !$data || ($data['status'] ?? 0) != 200 ) {
+		if ( !$data || ($data['status'] ?? 0) !== 200 ) {
 			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
 		}
 
