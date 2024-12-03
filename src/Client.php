@@ -450,7 +450,7 @@ class Client {
 			$this->_requests[] = [$method, $url, ...$redirects];
 		}
 		else {
-			$this->_requests[] = [$url];
+			$this->_requests[] = [$method, $url];
 		}
 
 		return $rsp;
