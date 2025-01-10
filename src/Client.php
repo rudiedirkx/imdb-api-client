@@ -16,11 +16,12 @@ class Client {
 		'sha256Hash' => '9672397d6bf156302f8f61e7ede2750222bd2689e65e21cfedc5abd5ca0f4aea',
 	];
 
-	protected $auth;
-	protected $guzzle;
-	public $_requests = [];
-	public $watchlist;
-	public $ratedlist;
+	protected Auth $auth;
+	protected Guzzle $guzzle;
+	public array $_requests = [];
+	public ?ListMeta $watchlist = null;
+	public ?ListMeta $ratedlist = null;
+	protected Account $account;
 
 	public function __construct( Auth $auth ) {
 		$this->auth = $auth;
@@ -146,7 +147,8 @@ class Client {
 			$redirects = [];
 		}
 		else {
-			$rsp = $this->get("https://www.imdb.com/list/ratings");
+			$userId = $this->getUserId();
+			$rsp = $this->get("https://www.imdb.com/user/$userId/ratings/");
 			$html = (string) $rsp->getBody();
 			// file_put_contents($debugFilepath, $html);
 
@@ -159,6 +161,7 @@ class Client {
 			$url = end($redirects);
 			if (preg_match('#/user/(ur\d+)/ratings\b#', $url, $match)) {
 				$userId = $match[1];
+				$this->setAccount($userId);
 			}
 		}
 
@@ -167,7 +170,13 @@ class Client {
 		if ($el) {
 			if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
 				$count = (int) str_replace(',', '', $match[1]);
-				$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId, version: ListMeta::VERSION_2023);
+				$this->ratedlist = new ListMeta(
+					ListMeta::TYPE_RATED,
+					'Ratings',
+					$count,
+					id: $userId,
+					version: ListMeta::VERSION_2023,
+				);
 			}
 
 			$titles = [];
@@ -191,6 +200,15 @@ class Client {
 			if (isset($data['props']['pageProps']['mainColumnData']['advancedTitleSearch']['edges'][0]['node'])) {
 				$advancedTitleSearch = $data['props']['pageProps']['mainColumnData']['advancedTitleSearch'];
 				$count = $advancedTitleSearch['total'];
+
+				$this->ratedlist = new ListMeta(
+					ListMeta::TYPE_RATED,
+					'Ratings',
+					$count,
+					id: $userId,
+					version: ListMeta::VERSION_2024,
+				);
+
 				foreach (array_slice($advancedTitleSearch['edges'], 0, 150) as $edge) {
 					if ($title = Title::fromGraphqlNode($edge['node']['title'])) {
 						$titles[] = $title;
@@ -205,7 +223,13 @@ class Client {
 			if ($el) {
 				if (preg_match('#^([\d,]+) titles#', $el->textContent, $match)) {
 					$count = (int) str_replace(',', '', $match[1]);
-					$this->ratedlist = new ListMeta(ListMeta::TYPE_RATED, 'Ratings', $count, id: $userId, version: ListMeta::VERSION_2024);
+					$this->ratedlist = new ListMeta(
+						ListMeta::TYPE_RATED,
+						'Ratings',
+						$count,
+						id: $userId,
+						version: ListMeta::VERSION_2024,
+					);
 				}
 
 				foreach ($dom->queryAll('.ipc-metadata-list-summary-item') as $item) {
@@ -378,6 +402,48 @@ class Client {
 			return Person::fromJsonSearch($item);
 		}
 		return null;
+	}
+
+	protected function setAccount(?string $userId, ?string $name) : void {
+		$this->account ??= new Account($userId);
+		if ($userId) $this->account->userId = $userId;
+		if ($name) $this->account->name = $name;
+	}
+
+	protected function getAccount() : Account {
+		if (isset($this->account)) {
+			return $this->account;
+		}
+
+		$rsp = $this->get('https://www.imdb.com/');
+		if ($rsp->getStatusCode() != 200) {
+			throw new RuntimeException("Homepage failed to load!? HTTP code " . $rsp->getStatusCode());
+		}
+
+		$html = (string) $rsp->getBody();
+		$dom = Node::create($html);
+
+		$el = $dom->query('script#__NEXT_DATA__');
+		if (!$el) {
+			throw new RuntimeException("Homepage doesn't have __NEXT_DATA__ element");
+		}
+
+		$json = $el->textContent;
+		$data = json_decode($json, true);
+		if (!$data || !is_array($data)) {
+			throw new RuntimeException("Homepage __NEXT_DATA__ is unreadable");
+		}
+
+		$account = $data['props']['pageProps']['requestContext']['sidecar']['account'] ?? null;
+		$userId = strval($account['userId'] ?? '') ?: null;
+		$name = strval($account['userName'] ?? '') ?: null;
+
+		$this->setAccount($userId, $name);
+		return $this->account;
+	}
+
+	protected function getUserId() : ?string {
+		return $this->getAccount()->userId;
 	}
 
 	protected function checkSession() : bool {
