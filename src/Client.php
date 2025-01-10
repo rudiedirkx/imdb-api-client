@@ -4,13 +4,14 @@ namespace rdx\imdb;
 
 use Exception;
 use GuzzleHttp\Client as Guzzle;
-use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RedirectMiddleware;
+use Psr\Http\Message\ResponseInterface;
 use rdx\jsdom\Node;
 use RuntimeException;
 
 class Client {
 
+	/** @var AssocArray */
 	static public array $userRatingsPersistedQuery = [
 		'version' => 1,
 		'sha256Hash' => '9672397d6bf156302f8f61e7ede2750222bd2689e65e21cfedc5abd5ca0f4aea',
@@ -18,12 +19,13 @@ class Client {
 
 	protected Auth $auth;
 	protected Guzzle $guzzle;
+	/** @var list<list<string>> */
 	public array $_requests = [];
 	public ?ListMeta $watchlist = null;
 	public ?ListMeta $ratedlist = null;
 	protected Account $account;
 
-	public function __construct( Auth $auth ) {
+	public function __construct(Auth $auth) {
 		$this->auth = $auth;
 
 		$this->guzzle = new Guzzle([
@@ -43,12 +45,15 @@ class Client {
 		return $this->auth->logIn($this) && $this->checkSession();
 	}
 
+	/**
+	 * @return AssocArray
+	 */
 	public function getGraphqlIntrospection() : array {
-		return $this->graphqlData(file_get_contents(__DIR__ . '/introspection.graphql'));
+		return $this->graphqlData((string) file_get_contents(__DIR__ . '/introspection.graphql'));
 	}
 
-	public function getGraphqlPerson( string $id ) : ?Person {
-		$data = $this->graphqlData(file_get_contents(__DIR__ . '/name.graphql'), [
+	public function getGraphqlPerson(string $id) : ?Person {
+		$data = $this->graphqlData((string) file_get_contents(__DIR__ . '/name.graphql'), [
 			'nameId' => $id,
 		]);
 
@@ -59,8 +64,8 @@ class Client {
 		return Person::fromGraphqlNode($data['data']['name']);
 	}
 
-	public function getGraphqlTitle( string $id ) : ?Title {
-		$data = $this->graphqlData(file_get_contents(__DIR__ . '/title.graphql'), [
+	public function getGraphqlTitle(string $id) : ?Title {
+		$data = $this->graphqlData((string) file_get_contents(__DIR__ . '/title.graphql'), [
 			'titleId' => $id,
 		]);
 
@@ -71,7 +76,11 @@ class Client {
 		return Title::fromGraphqlNode($data['data']['title']);
 	}
 
-	public function titlesInWatchlist( array $ids ) : array {
+	/**
+	 * @param list<string> $ids
+	 * @return list<string>  The tt ids that are in the watchlist
+	 */
+	public function titlesInWatchlist(array $ids) : array {
 		$rsp = $this->post('https://www.imdb.com/list/_ajax/watchlist_has',	[
 			'consts[]' => implode(',', $ids) . ',',
 			'tracking_tag' => 'watchlistRibbon',
@@ -84,22 +93,25 @@ class Client {
 		// {"extra":{"name":"49e6c","value":"25c5"},"has":{},"list_id":"ls000529936","status":200}
 
 		$data = json_decode($json, true);
-		if ( !$data || ($data['status'] ?? 0) !== 200 || !is_array($data['has'] ?? null) ) {
+		if (!$data || ($data['status'] ?? 0) !== 200 || !is_array($data['has'] ?? null)) {
 			throw new RuntimeException(sprintf('Unexpected watchlist_has response: %s', substr($json, 0, 300)));
 		}
 
-		if ( $this->watchlist && is_string($data['list_id'] ?? null) ) {
+		if ($this->watchlist && is_string($data['list_id'] ?? null)) {
 			$this->watchlist->id = $data['list_id'];
 		}
 
 		return array_keys($data['has']);
 	}
 
-	public function titleInWatchlist( string $id ) : bool {
+	public function titleInWatchlist(string $id) : bool {
 		$hasIds = $this->titlesInWatchlist([$id]);
 		return in_array($id, $hasIds);
 	}
 
+	/**
+	 * @return list<ListMeta>
+	 */
 	public function getLists() : array {
 		$rsp = $this->get("https://www.imdb.com/profile/lists/");
 		$html = (string) $rsp->getBody();
@@ -108,7 +120,7 @@ class Client {
 		return ListMeta::fromListsDocument($doc);
 	}
 
-	public function getTitle( string $id ) : ?Title {
+	public function getTitle(string $id) : ?Title {
 		$rsp = $this->get("https://www.imdb.com/title/$id/");
 		$html = (string) $rsp->getBody();
 		$doc = Node::create($html);
@@ -116,7 +128,10 @@ class Client {
 		return Title::fromTitleDocument($id, $doc);
 	}
 
-	public function getTitleActors( string $id ) : array {
+	/**
+	 * @return list<Actor>
+	 */
+	public function getTitleActors(string $id) : array {
 		$rsp = $this->get("https://www.imdb.com/title/$id/fullcredits/");
 		$html = (string) $rsp->getBody();
 
@@ -140,6 +155,9 @@ class Client {
 		return $this->ratedlist;
 	}
 
+	/**
+	 * @return list<Title>
+	 */
 	public function getTitleRatings() : array {
 		if (file_exists($debugFilepath = __DIR__ . '/imdb-ratings.html')) {
 			$html = file_get_contents($debugFilepath);
@@ -210,9 +228,7 @@ class Client {
 				);
 
 				foreach (array_slice($advancedTitleSearch['edges'], 0, 150) as $edge) {
-					if ($title = Title::fromGraphqlNode($edge['node']['title'])) {
-						$titles[] = $title;
-					}
+					$titles[] = Title::fromGraphqlNode($edge['node']['title']);
 				}
 			}
 		}
@@ -281,7 +297,7 @@ class Client {
 		return $titles;
 	}
 
-	public function getTitleRating( string $id ) : TitleRating {
+	public function getTitleRating(string $id) : TitleRating {
 		$data = $this->graphqlData(<<<'GRAPHQL'
 		query GetTitle($titleId: ID!) {
 			title(id: $titleId) {
@@ -298,7 +314,7 @@ class Client {
 		return new TitleRating($id, $data['data']['title']['userRating']['value'] ?? null);
 	}
 
-	public function rateTitle( string $id, int $rating ) : bool {
+	public function rateTitle(string $id, int $rating) : bool {
 		$rsp = $this->graphql(<<<'GRAPHQL'
 		mutation UpdateTitleRating($rating: Int!, $titleId: ID!) {
 			rateTitle(input: {rating: $rating, titleId: $titleId}) {
@@ -315,9 +331,9 @@ class Client {
 		return $rsp->getStatusCode() == 200;
 	}
 
-	public function addTitleToWatchlist( string $id ) : bool {
+	public function addTitleToWatchlist(string $id) : bool {
 		$rsp = $this->put("https://www.imdb.com/watchlist/$id");
-		if ( $rsp->getStatusCode() != 200 ) {
+		if ($rsp->getStatusCode() != 200) {
 			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
 		}
 
@@ -326,16 +342,16 @@ class Client {
 		$json = trim((string) $rsp->getBody());
 // echo "\n\n$json\n\n";
 		$data = json_decode($json, true);
-		if ( !$data || ($data['status'] ?? 0) !== 200 ) {
+		if (!$data || ($data['status'] ?? 0) !== 200) {
 			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
 		}
 
 		return !empty($data['list_item_id']);
 	}
 
-	public function removeTitleFromWatchlist( string $id ) : bool {
+	public function removeTitleFromWatchlist(string $id) : bool {
 		$rsp = $this->delete("https://www.imdb.com/watchlist/$id");
-		if ( $rsp->getStatusCode() != 200 ) {
+		if ($rsp->getStatusCode() != 200) {
 			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
 		}
 
@@ -343,32 +359,45 @@ class Client {
 		$json = trim((string) $rsp->getBody());
 // echo "\n\n$json\n\n";
 		$data = json_decode($json, true);
-		if ( !$data || ($data['status'] ?? 0) !== 200 ) {
+		if (!$data || ($data['status'] ?? 0) !== 200) {
 			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
 		}
 
 		return true;
 	}
 
-	public function searchTitles( string $query ) : array {
+	/**
+	 * @return list<SearchResult>
+	 */
+	public function searchTitles(string $query) : array {
 		return array_values(array_filter($this->search($query), fn($result) => $result instanceof Title));
 	}
 
-	public function searchPeople( string $query ) : array {
+	/**
+	 * @return list<SearchResult>
+	 */
+	public function searchPeople(string $query) : array {
 		return array_values(array_filter($this->search($query), fn($result) => $result instanceof Person));
 	}
 
-	public function searchGraphql( string $query, array $options = [] ) : array {
-		$data = $this->graphqlData(file_get_contents(__DIR__ . '/search.graphql'), [
+	/**
+	 * @param AssocArray $options
+	 * @return list<SearchResult>
+	 */
+	public function searchGraphql(string $query, array $options = []) : array {
+		$data = $this->graphqlData((string) file_get_contents(__DIR__ . '/search.graphql'), [
 			'query' => $query,
 			'first' => $options['limit'] ?? 20,
 			'types' => $options['types'] ?? ['TITLE', 'NAME'],
 		]);
 
-		$results = array_map([$this, 'makeGraphqlSearchResult'], $data['data']['mainSearch']['edges'] ?? []);
+		$results = array_map($this->makeGraphqlSearchResult(...), $data['data']['mainSearch']['edges'] ?? []);
 		return array_values(array_filter($results));
 	}
 
+	/**
+	 * @param AssocArray $item
+	 */
 	protected function makeGraphqlSearchResult(array $item) : ?SearchResult {
 		$item = $item['node']['entity'];
 		if (preg_match('#^tt\d+#', $item['id'] ?? '')) {
@@ -380,7 +409,10 @@ class Client {
 		return null;
 	}
 
-	public function search( string $query ) : array {
+	/**
+	 * @return list<SearchResult>
+	 */
+	public function search(string $query) : array {
 		$clean = str_replace(["'"], '', strtolower($query));
 		$clean = trim(preg_replace('#_+#', '_', preg_replace('#[^0-9a-z]+#', '_', $clean)), '_');
 
@@ -390,10 +422,13 @@ class Client {
 		$json = (string) $rsp->getBody();
 		$data = json_decode($json, true);
 
-		$results = array_map([$this, 'makeJsonSearchResult'], $data['d'] ?? []);
+		$results = array_map($this->makeJsonSearchResult(...), $data['d'] ?? []);
 		return array_values(array_filter($results));
 	}
 
+	/**
+	 * @param AssocArray $item
+	 */
 	protected function makeJsonSearchResult(array $item) : ?SearchResult {
 		if (preg_match('#^tt\d+#', $item['id'])) {
 			return Title::fromJsonSearch($item);
@@ -404,7 +439,7 @@ class Client {
 		return null;
 	}
 
-	protected function setAccount(?string $userId, ?string $name) : void {
+	protected function setAccount(?string $userId, ?string $name = null) : void {
 		$this->account ??= new Account($userId);
 		if ($userId) $this->account->userId = $userId;
 		if ($name) $this->account->name = $name;
@@ -461,7 +496,10 @@ class Client {
 		return true;
 	}
 
-	protected function unpackGraphqlJson( string $json ) : array {
+	/**
+	 * @return AssocArray
+	 */
+	protected function unpackGraphqlJson(string $json) : array {
 		$data = json_decode($json, true);
 		if (!$data) {
 			throw new RuntimeException(sprintf("Invalid JSON response: %s", substr($json, 0, 100)));
@@ -474,17 +512,27 @@ class Client {
 		return $data;
 	}
 
-	public function graphqlData( string $query, array $vars = [] ) : array {
+	/**
+	 * @param AssocArray $vars
+	 * @return AssocArray
+	 */
+	public function graphqlData(string $query, array $vars = []) : array {
 		$rsp = $this->graphql($query, $vars);
 		$json = (string) $rsp->getBody();
 		return $this->unpackGraphqlJson($json);
 	}
 
-	public function graphql( string $query, array $vars = [] ) : Response {
+	/**
+	 * @param AssocArray $vars
+	 */
+	public function graphql(string $query, array $vars = []) : ResponseInterface {
 		return $this->graphqlRaw(['query' => $query, 'variables' => $vars]);
 	}
 
-	protected function graphqlRaw( array $body = [] ) : Response {
+	/**
+	 * @param AssocArray $body
+	 */
+	protected function graphqlRaw(array $body = []) : ResponseInterface {
 		$url = 'https://api.graphql.imdb.com/';
 		$rsp = $this->guzzle->post($url, [
 			// 'headers' => ['Content-type' => 'application/json'],
@@ -493,27 +541,30 @@ class Client {
 		return $this->rememberRequests('POST', $url, $rsp);
 	}
 
-	protected function post( string $url, array $input ) : Response {
+	/**
+	 * @param AssocArray $input
+	 */
+	protected function post(string $url, array $input) : ResponseInterface {
 		return $this->rememberRequests('POST', $url, $this->guzzle->post($url, [
 			'form_params' => $input,
 		]));
 	}
 
-	protected function put( string $url ) : Response {
+	protected function put(string $url) : ResponseInterface {
 		return $this->rememberRequests('PUT', $url, $this->guzzle->put($url));
 	}
 
-	protected function delete( string $url ) : Response {
+	protected function delete(string $url) : ResponseInterface {
 		return $this->rememberRequests('DELETE', $url, $this->guzzle->delete($url));
 	}
 
-	protected function get( string $url ) : Response {
+	protected function get(string $url) : ResponseInterface {
 		return $this->rememberRequests('GET', $url, $this->guzzle->get($url));
 	}
 
-	protected function rememberRequests( string $method, string $url, Response $rsp ) : Response {
+	protected function rememberRequests(string $method, string $url, ResponseInterface $rsp) : ResponseInterface {
 		if (count($redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER))) {
-			$this->_requests[] = [$method, $url, ...$redirects];
+			$this->_requests[] = [$method, $url, ...array_values($redirects)];
 		}
 		else {
 			$this->_requests[] = [$method, $url];

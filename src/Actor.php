@@ -13,6 +13,9 @@ class Actor {
 		public ?string $source = null,
 	) {}
 
+	/**
+	 * @param AssocArray $node
+	 */
 	static protected function fromGraphqlPerson(array $node) : ?static {
 		if (!empty($node['summary']['principalCharacters'])) {
 			return new static(
@@ -41,6 +44,11 @@ class Actor {
 		return null;
 	}
 
+	/**
+	 * @param list<AssocArray> $credits
+	 * @param list<AssocArray> $knownFor
+	 * @return list<self>
+	 */
 	static public function fromGraphqlPersonCreditsAndKnownFor(array $credits, array $knownFor) : array {
 		$actors = [];
 
@@ -63,19 +71,26 @@ class Actor {
 		return $actors;
 	}
 
+	/**
+	 * @param list<AssocArray> $credits
+	 * @return list<Actor>
+	 */
 	static public function fromGraphqlTitleCredits(array $credits) : array {
-		return array_values(array_filter(array_map(function($node) {
+		return array_map(function(array $node) {
 			return new static(
 				Person::fromGraphqlNode($node['name'] ?? $node['node']['name']),
 				new Character($node['node']['characters'][0]['name'] ?? '?'),
 				null,
 			);
-		}, $credits)));
+		}, $credits);
 	}
 
+	/**
+	 * @return list<self>
+	 */
 	static public function fromTitleDocument(Node $doc) : array {
 		$actors = $doc->queryAll('[data-testid="title-cast-item"]');
-		$actors = array_map(function($el) {
+		$actors = array_values(array_map(function($el) {
 			$person = $el->query('a[data-testid="title-cast-item__actor"]');
 			$character = $el->query('.title-cast-item__characters-list a > span:first-child');
 			return new static(
@@ -83,10 +98,13 @@ class Actor {
 				new Character(preg_replace('#^as #', '', $character->textContent)),
 				null,
 			);
-		}, $actors);
+		}, $actors));
 		return $actors;
 	}
 
+	/**
+	 * @return list<self>
+	 */
 	static public function fromCreditsDocument(Node $doc) : array {
 		$rows = $doc->queryAll('table.cast_list tr');
 

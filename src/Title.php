@@ -26,12 +26,14 @@ class Title implements SearchResult {
 		public string $name,
 		public ?string $originalName = null,
 		public ?int $type = null,
+		/** @var list<string> */
 		public array $genres = [],
 		public ?int $year = null,
 		public ?int $endYear = null,
 		public ?string $plot = null,
 		public ?int $duration = null,
 		public ?string $searchInfo = null,
+		/** @var list<Actor> */
 		public array $actors = [],
 		public ?float $rating = null,
 		public ?int $ratings = null,
@@ -78,7 +80,7 @@ class Title implements SearchResult {
 		if ($this->type === self::TYPE_SERIES) {
 			return $this->year . ' - ' . ($this->endYear ?? '?');
 		}
-		return $this->year;
+		return (string) $this->year;
 	}
 
 	public function getUrl() : string {
@@ -94,13 +96,13 @@ class Title implements SearchResult {
 
 	static public function getDurationFromLabel(string $duration) : ?int {
 		if (preg_match('#^(\d+)(?:h| hr) (\d+)(?:m| min)$#', $duration, $match)) {
-			return $match[1] * 3600 + $match[2] * 60 + 1;
+			return intval($match[1]) * 3600 + intval($match[2]) * 60 + 1;
 		}
 		elseif (preg_match('#^(\d+)(?:h| hr)$#', $duration, $match)) {
-			return $match[1] * 3600 + 1;
+			return intval($match[1]) * 3600 + 1;
 		}
 		elseif (preg_match('#^(\d+)(?:m| min)$#', $duration, $match)) {
-			return $match[1] * 60 + 1;
+			return intval($match[1]) * 60 + 1;
 		}
 
 		return null;
@@ -154,6 +156,10 @@ class Title implements SearchResult {
 		return null;
 	}
 
+	/**
+	 * @param array{genres?: list<AssocArray>} $genres
+	 * @return list<string>
+	 */
 	static public function extractGraphqlGenres(array $genres) : array {
 		$names = [];
 		foreach ($genres['genres'] ?? [] as $genre) {
@@ -165,6 +171,9 @@ class Title implements SearchResult {
 		return $names;
 	}
 
+	/**
+	 * @param AssocArray $item
+	 */
 	static public function fromJsonSearch(array $item) : Title {
 // dump($item);
 		return new static(
@@ -177,6 +186,9 @@ class Title implements SearchResult {
 		);
 	}
 
+	/**
+	 * @param AssocArray $title
+	 */
 	static public function fromGraphqlNode(array $title) : Title {
 // dump($title);
 		return new static(
@@ -230,7 +242,7 @@ class Title implements SearchResult {
 
 		$year = (int) trim($year->textContent, 'I )(');
 
-		$ratedOn = preg_match('#Rated on (\d+ \w+ \d{4})#', $item->textContent, $match) ? strtotime($match[1]) : null;
+		$ratedOn = preg_match('#Rated on (\d+ \w+ \d{4})#', $item->textContent, $match) ? (int) strtotime($match[1]) : null;
 
 		return new static(
 			$id = static::getIdFromHref($a['href']),
@@ -268,7 +280,7 @@ class Title implements SearchResult {
 		foreach ($doc->queryAll('[href^="/title/' . $id . '/releaseinfo"]') as $el) {
 			$text = trim($el->textContent);
 			if (preg_match('#^(\d\d\d\d)\b#', $text, $match)) {
-				return $match[1];
+				return (int) $match[1];
 			}
 		}
 		return null;

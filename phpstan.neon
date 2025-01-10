@@ -1,0 +1,10 @@
+parameters:
+	level: 7
+	paths:
+		- src/
+	excludePaths:
+		- src/AuthWeb.php
+	typeAliases:
+		AssocArray: 'array<string, mixed>'
+	ignoreErrors:
+		- identifier: new.static

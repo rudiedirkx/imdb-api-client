@@ -10,6 +10,7 @@ class Person implements SearchResult {
 		public ?string $searchInfo = null,
 		public ?int $birthYear = null,
 		public ?Image $image = null,
+		/** @var list<Actor> */
 		public array $credits = [],
 	) {}
 
@@ -30,6 +31,9 @@ class Person implements SearchResult {
 		return "https://www.imdb.com/name/$this->id/";
 	}
 
+	/**
+	 * @param AssocArray $name
+	 */
 	static public function fromGraphqlNode(array $name) : Person {
 		return new Person(
 			$name['id'],
@@ -40,7 +44,10 @@ class Person implements SearchResult {
 		);
 	}
 
-	static public function fromJsonSearch(array $item) {
+	/**
+	 * @param AssocArray $item
+	 */
+	static public function fromJsonSearch(array $item) : Person {
 		return new static(
 			$item['id'],
 			$item['l'],

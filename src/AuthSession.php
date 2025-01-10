@@ -6,7 +6,7 @@ use GuzzleHttp\Cookie\CookieJar;
 
 class AuthSession implements Auth {
 
-	protected $cookies;
+	protected CookieJar $cookies;
 
 	public function __construct(string $atMain, string $ubidMain) {
 		$this->cookies = new CookieJar(false, [

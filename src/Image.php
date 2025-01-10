@@ -17,13 +17,16 @@ class Image {
 	}
 
 	public function getHeightForWidth(int $width) : ?int {
-		return $this->ratio === null ? null : round($width / $this->ratio);
+		return $this->ratio === null ? null : (int) round($width / $this->ratio);
 	}
 
 	public function getWidthForHeight(int $height) : ?int {
-		return $this->ratio === null ? null : round($height * $this->ratio);
+		return $this->ratio === null ? null : (int) round($height * $this->ratio);
 	}
 
+	/**
+	 * @param AssocArray $node
+	 */
 	static public function fromGraphql(array $node) : ?Image {
 		if (empty($node['url'])) return null;
 
@@ -34,6 +37,9 @@ class Image {
 		);
 	}
 
+	/**
+	 * @param AssocArray $node
+	 */
 	static public function fromJsonSearch(array $node) : ?Image {
 		if (empty($node['imageUrl'])) return null;
 
