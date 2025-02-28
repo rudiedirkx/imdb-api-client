@@ -77,9 +77,10 @@ class Actor {
 	 */
 	static public function fromGraphqlTitleCredits(array $credits) : array {
 		return array_map(function(array $node) {
+			$charNames = implode(Character::DELIM, array_column($node['node']['characters'] ?? [], 'name'));
 			return new static(
 				Person::fromGraphqlNode($node['name'] ?? $node['node']['name']),
-				new Character($node['node']['characters'][0]['name'] ?? '?'),
+				new Character($charNames ?: '?'),
 				null,
 			);
 		}, $credits);
