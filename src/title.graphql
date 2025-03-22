@@ -31,9 +31,34 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 				}
 			}
 		}
-		# series {
-		# 	type
-		# }
+		series {
+			episodeNumber {
+				episodeNumber
+				seasonNumber
+			}
+			series {
+				id
+				titleText {
+					text
+				}
+				originalTitleText {
+					text
+				}
+			}
+		}
+		episodes {
+			episodes(first: 3) {
+				total
+				edges {
+					node {
+						id
+						titleText {
+							text
+						}
+					}
+				}
+			}
+		}
 		userRating {
 			value
 		}

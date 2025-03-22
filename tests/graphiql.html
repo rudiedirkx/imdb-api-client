@@ -1,32 +1,48 @@
-<!doctype html>
-<html style="overflow: hidden">
-	<head>
-		<title>GraphiQL</title>
-		<link href="https://unpkg.com/graphiql/graphiql.min.css" rel="stylesheet" />
-	</head>
-	<body style="margin: 0;">
-		<div id="graphiql" style="height: 100vh;"></div>
+<!DOCTYPE html>
+<html>
+<head>
+	<title>GraphiQL</title>
+	<style>
+	body {
+		height: 100%;
+		margin: 0;
+		width: 100%;
+		overflow: hidden;
+	}
+	#graphiql {
+		height: 100vh;
+	}
+	</style>
+	<script src="graphiql/react.min.js"></script>
+	<script src="graphiql/react-dom.min.js"></script>
+	<link rel="stylesheet" href="graphiql/graphiql.css" />
+	<script src="graphiql/graphiql.js" charset="utf-8"></script>
+</head>
 
-		<script
-			crossorigin
-			src="https://unpkg.com/react/umd/react.production.min.js"
-		></script>
-		<script
-			crossorigin
-			src="https://unpkg.com/react-dom/umd/react-dom.production.min.js"
-		></script>
-		<script
-			crossorigin
-			src="https://unpkg.com/graphiql/graphiql.min.js"
-		></script>
+<body>
+<div id="graphiql">Loading...</div>
+<script>
+function graphQLFetcher(graphQLParams) {
+	return new Promise(resolve => {
+		const xhr = new XMLHttpRequest;
+		xhr.open('post', 'graphiql.php', true);
+		xhr.onload = function(e) {
+			const txt = this.responseText;
+			try {
+				resolve(JSON.parse(txt));
+			}
+			catch (ex) {
+				console.warn('RESPONSE ERROR:\n' + txt);
+				alert('Response error. See console.');
+			}
+		};
+		xhr.send(JSON.stringify(graphQLParams));
+	});
+}
 
-		<script>
-			const fetcher = GraphiQL.createFetcher({url: './graphiql.php'});
-
-			ReactDOM.render(
-				React.createElement(GraphiQL, { fetcher: fetcher }),
-				document.getElementById('graphiql'),
-			);
-		</script>
-	</body>
+ReactDOM.render(React.createElement(GraphiQL, {
+	fetcher: graphQLFetcher,
+}), document.getElementById('graphiql'));
+</script>
+</body>
 </html>

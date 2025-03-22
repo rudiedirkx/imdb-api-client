@@ -526,7 +526,7 @@ class Client {
 	 * @param AssocArray $vars
 	 */
 	public function graphql(string $query, array $vars = []) : ResponseInterface {
-		return $this->graphqlRaw(['query' => $query, 'variables' => $vars]);
+		return $this->graphqlRaw(['query' => $query, 'variables' => (object) $vars]);
 	}
 
 	/**

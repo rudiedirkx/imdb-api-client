@@ -26,6 +26,9 @@ class Title implements SearchResult {
 		public string $name,
 		public ?string $originalName = null,
 		public ?int $type = null,
+		public ?Title $series = null,
+		/** @var list<Title> */
+		public array $episodes = [],
 		/** @var list<string> */
 		public array $genres = [],
 		public ?int $year = null,
@@ -196,6 +199,10 @@ class Title implements SearchResult {
 			$title['titleText']['text'],
 			originalName: $title['originalTitleText']['text'] ?? null,
 			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
+			series: empty($title['series']['series']) ? null : self::fromGraphqlNode($title['series']['series']),
+			episodes: empty($title['episodes']['episodes']) ? [] : array_map(function(array $info) {
+				return self::fromGraphqlNode($info['node']);
+			}, $title['episodes']['episodes']['edges']),
 			genres: self::extractGraphqlGenres($title['genres'] ?? []),
 			year: $title['releaseYear']['year'] ?? null,
 			endYear: $title['releaseYear']['endYear'] ?? null,
