@@ -16,6 +16,11 @@ class Client {
 		'version' => 1,
 		'sha256Hash' => '9672397d6bf156302f8f61e7ede2750222bd2689e65e21cfedc5abd5ca0f4aea',
 	];
+	/** @var AssocArray */
+	static public array $watchlistStatePersistedQuery = [
+		'version' => 1,
+		'sha256Hash' => '8573d31b2dda37d8daa0ad258982b67d44f2c7aed823f423eb03fd543a20cada',
+	];
 
 	protected Auth $auth;
 	protected Guzzle $guzzle;
@@ -81,6 +86,26 @@ class Client {
 	 * @return list<string>  The tt ids that are in the watchlist
 	 */
 	public function titlesInWatchlist(array $ids) : array {
+		$body = [
+			'operationName' => 'WatchlistStateById',
+			'variables' => [
+				'ids' => $ids,
+			],
+			'extensions' => [
+				'persistedQuery' => static::$watchlistStatePersistedQuery,
+			],
+		];
+		try {
+			$rsp = $this->graphqlRaw($body);
+			$json = (string) $rsp->getBody();
+			$data = $this->unpackGraphqlJson($json);
+			$list = array_column($data['data']['predefinedList']['areElementsInList'], 'isElementInList', 'itemElementId');
+			return array_keys(array_filter($list));
+		}
+		catch (Exception $ex) {
+			// Fall back to old method?
+		}
+
 		$rsp = $this->post('https://www.imdb.com/list/_ajax/watchlist_has',	[
 			'consts[]' => implode(',', $ids) . ',',
 			'tracking_tag' => 'watchlistRibbon',
