@@ -21,6 +21,11 @@ class Client {
 		'version' => 1,
 		'sha256Hash' => '8573d31b2dda37d8daa0ad258982b67d44f2c7aed823f423eb03fd543a20cada',
 	];
+	/** @var AssocArray */
+	static public array $watchlistCountPersistedQuery = [
+		'version' => 1,
+		'sha256Hash' => '4a86e378bb896aedcab5eacebdeb19d0b0e14861e82ad64d5fb3bcfc639e79b7',
+	];
 
 	protected Auth $auth;
 	protected Guzzle $guzzle;
@@ -357,38 +362,89 @@ class Client {
 	}
 
 	public function addTitleToWatchlist(string $id) : bool {
-		$rsp = $this->put("https://www.imdb.com/watchlist/$id");
-		if ($rsp->getStatusCode() != 200) {
-			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
-		}
+		$body = [
+			'operationName' => 'AddIdToWatchlist',
+			'variables' => [
+				'id' => $id,
+			],
+			'query' => <<<'GRAPHQL'
+			mutation AddIdToWatchlist($id: ID!) {
+				addItemToPredefinedList(
+					input: {classType: WATCH_LIST, item: {itemElementId: $id}}
+				) {
+					modifiedItem {
+						itemId
+					}
+				}
+			}
+			GRAPHQL,
+		];
 
-		// {"list_id":"ls123456789","list_item_id":"234567890","status":200} = new
-		// {"list_id":"ls123456789","list_item_id":"0","status":200} = exists
-		$json = trim((string) $rsp->getBody());
-// echo "\n\n$json\n\n";
-		$data = json_decode($json, true);
-		if (!$data || ($data['status'] ?? 0) !== 200) {
-			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
-		}
+		$rsp = $this->graphqlRaw($body);
+		$json = (string) $rsp->getBody();
+// dump($json);
+		$data = $this->unpackGraphqlJson($json);
 
-		return !empty($data['list_item_id']);
+		return !empty($data['data']['addItemToPredefinedList']['modifiedItem']['itemId']);
+
+// 		$rsp = $this->put("https://www.imdb.com/watchlist/$id");
+// 		if ($rsp->getStatusCode() != 200) {
+// 			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
+// 		}
+
+// 		// {"list_id":"ls123456789","list_item_id":"234567890","status":200} = new
+// 		// {"list_id":"ls123456789","list_item_id":"0","status":200} = exists
+// 		$json = trim((string) $rsp->getBody());
+// // echo "\n\n$json\n\n";
+// 		$data = json_decode($json, true);
+// 		if (!$data || ($data['status'] ?? 0) !== 200) {
+// 			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
+// 		}
+
+// 		return !empty($data['list_item_id']);
 	}
 
 	public function removeTitleFromWatchlist(string $id) : bool {
-		$rsp = $this->delete("https://www.imdb.com/watchlist/$id");
-		if ($rsp->getStatusCode() != 200) {
-			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
-		}
+		$body = [
+			'operationName' => 'RemoveIdFromWatchlist',
+			'variables' => [
+				'id' => $id,
+			],
+			'query' => <<<'GRAPHQL'
+			mutation RemoveIdFromWatchlist($id: ID!) {
+				removeElementFromPredefinedList(
+					input: {classType: WATCH_LIST, itemElementId: $id}
+				) {
+					modifiedItem {
+						itemId
+					}
+				}
+			}
+			GRAPHQL,
+		];
 
-		// {"list_id":"ls123456789","status":200}
-		$json = trim((string) $rsp->getBody());
-// echo "\n\n$json\n\n";
-		$data = json_decode($json, true);
-		if (!$data || ($data['status'] ?? 0) !== 200) {
-			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
-		}
+		$rsp = $this->graphqlRaw($body);
+		$json = (string) $rsp->getBody();
+// dump($json);
+		$data = $this->unpackGraphqlJson($json);
 
-		return true;
+		return !empty($data['data']['removeElementFromPredefinedList']['modifiedItem'])
+			&& empty($data['data']['removeElementFromPredefinedList']['modifiedItem']['itemId']);
+
+// 		$rsp = $this->delete("https://www.imdb.com/watchlist/$id");
+// 		if ($rsp->getStatusCode() != 200) {
+// 			throw new RuntimeException(sprintf("Watchlist http code = %d", $rsp->getStatusCode()));
+// 		}
+
+// 		// {"list_id":"ls123456789","status":200}
+// 		$json = trim((string) $rsp->getBody());
+// // echo "\n\n$json\n\n";
+// 		$data = json_decode($json, true);
+// 		if (!$data || ($data['status'] ?? 0) !== 200) {
+// 			throw new RuntimeException(sprintf("Watchlist response status = %s", $data['status'] ?? '?'));
+// 		}
+
+// 		return true;
 	}
 
 	/**
@@ -507,16 +563,31 @@ class Client {
 	}
 
 	protected function checkSession() : bool {
-		$rsp = $this->get('https://www.imdb.com/_ajax/list/watchlist/count');
-		if ($rsp->getStatusCode() != 200) {
+		$body = [
+			'operationName' => 'WatchlistCount',
+			'extensions' => [
+				'persistedQuery' => static::$watchlistCountPersistedQuery,
+			],
+		];
+		try {
+			$rsp = $this->graphqlRaw($body);
+			$json = (string) $rsp->getBody();
+// dump($json);
+			$data = $this->unpackGraphqlJson($json);
+		}
+		catch (Exception $ex) {
 			return false;
 		}
 
-		$json = (string) $rsp->getBody();
-		$data = json_decode($json, true);
-		if (isset($data['count'])) {
-			$this->watchlist = new ListMeta(ListMeta::TYPE_WATCHLIST, 'Watchlist', $data['count']);
+		if (count($data['errors'] ?? [])) {
+			return false;
 		}
+
+		if (!isset($data['data']['predefinedList']['items']['total'])) {
+			return false;
+		}
+
+		$this->watchlist = new ListMeta(ListMeta::TYPE_WATCHLIST, 'Watchlist', $data['data']['predefinedList']['items']['total']);
 
 		return true;
 	}
