@@ -26,7 +26,7 @@ class Character {
 			return '';
 		}
 
-		return $this->names;
+		return $this->name;
 	}
 
 }
