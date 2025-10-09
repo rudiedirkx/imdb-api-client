@@ -14,7 +14,7 @@ class Client {
 	/** @var AssocArray */
 	static public array $userRatingsPersistedQuery = [
 		'version' => 1,
-		'sha256Hash' => '9672397d6bf156302f8f61e7ede2750222bd2689e65e21cfedc5abd5ca0f4aea',
+		'sha256Hash' => '7c4e0771d67f21fc27fd44fc46d49cc589225a9c5e63e51cc0b8d42f39ee99cc',
 	];
 	/** @var AssocArray */
 	static public array $watchlistStatePersistedQuery = [
@@ -189,7 +189,7 @@ class Client {
 	 * @return list<Title>
 	 */
 	public function getTitleRatings() : array {
-		if (file_exists($debugFilepath = __DIR__ . '/imdb-ratings.html')) {
+		if (file_exists($debugFilepath = sys_get_temp_dir() . '/imdb-ratings.html')) {
 			$html = file_get_contents($debugFilepath);
 
 			$redirects = [];
@@ -290,11 +290,12 @@ class Client {
 
 		// Plus GraphQL data
 		$body = [
-			'operationName' => 'UserRatingsAndWatchOptions',
+			'operationName' => 'PersonalizedUserData',
 			'variables' => [
 				'locale' => 'en-US',
 				'idArray' => array_column($titles, 'id'),
-				'includeUserRating' => true,
+				'includeUserData' => true,
+				'includeWatchedData' => true,
 				'location' => [
 					'latLong' => [
 						'lat' => '52.35',
