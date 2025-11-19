@@ -522,7 +522,7 @@ class Client {
 		return null;
 	}
 
-	protected function setAccount(?string $userId, ?string $name = null) : void {
+	public function setAccount(?string $userId, ?string $name = null) : void {
 		$this->account ??= new Account($userId);
 		if ($userId) $this->account->userId = $userId;
 		if ($name) $this->account->name = $name;
