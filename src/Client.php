@@ -42,9 +42,9 @@ class Client {
 			'http_errors' => false,
 			'cookies' => $auth->cookies(),
 			'headers' => [
-				'User-agent' => 'imdb/1.1',
-				'Accept-language' => 'en-US',
-				// 'User-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+				// 'User-agent' => 'imdb/1.1',
+				'User-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+				'Accept-language' => 'en-CA,en;q=0.9',
 			],
 			'allow_redirects' => [
 				'track_redirects' => true,
@@ -88,6 +88,44 @@ class Client {
 	}
 
 	/**
+	 * @return list<TitleListItem>
+	 */
+	public function getTitleListItems(string $id) : array {
+		if (file_exists($debugFilepath = sys_get_temp_dir() . '/imdb-list.html')) {
+			$html = file_get_contents($debugFilepath);
+		}
+		else {
+			$rsp = $this->get("https://www.imdb.com/list/$id/edit/", [
+				'headers' => [
+					'accept' => 'text/html',
+				],
+			]);
+// dump($rsp);
+			$html = (string) $rsp->getBody();
+			// file_put_contents($debugFilepath, $html);
+		}
+		$dom = Node::create($html);
+
+		$el = $dom->query('script#__NEXT_DATA__');
+		if (!$el) {
+			throw new RuntimeException("List doesn't have __NEXT_DATA__ element");
+		}
+
+		$json = $el->textContent;
+		$data = json_decode($json, true);
+		$rawItems = $data['props']['pageProps']['mainColumnData']['list']['listItems']['edges'] ?? null;
+		if (!is_array($rawItems)) {
+			throw new RuntimeException("List __NEXT_DATA__ doesn't have items in expected place");
+		}
+
+		$items = array_map(function(array $item) {
+			return TitleListItem::fromGraphqlNode($item['node']);
+		}, array_values($rawItems));
+
+		return $items;
+	}
+
+	/**
 	 * @param list<string> $ids
 	 * @return list<string>  The tt ids that are in the watchlist
 	 */
@@ -111,6 +149,8 @@ class Client {
 		catch (Exception $ex) {
 			// Fall back to old method?
 		}
+
+		// Old method:
 
 		$rsp = $this->post('https://www.imdb.com/list/_ajax/watchlist_has',	[
 			'consts[]' => implode(',', $ids) . ',',
@@ -182,22 +222,26 @@ class Client {
 	}
 
 	public function getTitleRatingsMeta() : ?ListMeta {
-		$this->getTitleRatings();
+		$this->getTitleRatings(simple: true);
 		return $this->ratedlist;
 	}
 
 	/**
 	 * @return list<Title>
 	 */
-	public function getTitleRatings() : array {
+	public function getTitleRatings(bool $simple = false) : array {
 		if (file_exists($debugFilepath = sys_get_temp_dir() . '/imdb-ratings.html')) {
 			$html = file_get_contents($debugFilepath);
 
 			$redirects = [];
 		}
 		else {
-			$userId = $this->getUserId();
-			$rsp = $this->get("https://www.imdb.com/user/$userId/ratings/");
+			// $userId = $this->getUserId();
+			$rsp = $this->get("https://www.imdb.com/list/ratings/", [
+				'headers' => [
+					'accept' => 'text/html',
+				],
+			]);
 			$html = (string) $rsp->getBody();
 			// file_put_contents($debugFilepath, $html);
 
@@ -288,6 +332,8 @@ class Client {
 		}
 
 		if (!count($titles)) return [];
+
+		if ($simple) return $titles;
 
 		// Plus GraphQL data
 		$body = [
@@ -630,12 +676,15 @@ class Client {
 	/**
 	 * @param AssocArray $body
 	 */
-	protected function graphqlRaw(array $body = []) : ResponseInterface {
+	protected function graphqlRaw(array $body) : ResponseInterface {
 		$url = 'https://api.graphql.imdb.com/';
 		$rsp = $this->guzzle->post($url, [
 			// 'headers' => ['Content-type' => 'application/json'],
 			'json' => $body,
 		]);
+		if (is_string($body['operationName'] ?? null)) {
+			$url .= '?operationName=' . $body['operationName'];
+		}
 		return $this->rememberRequests('POST', $url, $rsp);
 	}
 
@@ -656,8 +705,11 @@ class Client {
 		return $this->rememberRequests('DELETE', $url, $this->guzzle->delete($url));
 	}
 
-	protected function get(string $url) : ResponseInterface {
-		return $this->rememberRequests('GET', $url, $this->guzzle->get($url));
+	/**
+	 * @param AssocArray $options
+	 */
+	protected function get(string $url, array $options = []) : ResponseInterface {
+		return $this->rememberRequests('GET', $url, $this->guzzle->get($url, $options));
 	}
 
 	protected function rememberRequests(string $method, string $url, ResponseInterface $rsp) : ResponseInterface {
