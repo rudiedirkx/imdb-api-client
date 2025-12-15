@@ -229,7 +229,7 @@ class Client {
 	/**
 	 * @return list<Title>
 	 */
-	public function getTitleRatings(bool $simple = false) : array {
+	public function getTitleRatings(bool $simple = false, int $page = 1) : array {
 		if (file_exists($debugFilepath = sys_get_temp_dir() . '/imdb-ratings.html')) {
 			$html = file_get_contents($debugFilepath);
 
@@ -237,7 +237,16 @@ class Client {
 		}
 		else {
 			// $userId = $this->getUserId();
-			$rsp = $this->get("https://www.imdb.com/list/ratings/", [
+			$url = "https://www.imdb.com/list/ratings/";
+			if ($page != 1) {
+				if (!$this->account?->userId) {
+					throw new RuntimeException("");
+				}
+
+				$uid = $this->account->userId;
+				$url = "https://www.imdb.com/user/$uid/ratings/?sort=date_added%2Cdesc&page=$page";
+			}
+			$rsp = $this->get($url, [
 				'headers' => [
 					'accept' => 'text/html',
 				],
@@ -302,7 +311,7 @@ class Client {
 					version: ListMeta::VERSION_2024,
 				);
 
-				foreach (array_slice($advancedTitleSearch['edges'], 0, 150) as $edge) {
+				foreach (array_slice($advancedTitleSearch['edges'], 0, 260) as $edge) {
 					$titles[] = Title::fromGraphqlNode($edge['node']['title']);
 				}
 			}
