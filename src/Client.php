@@ -33,7 +33,7 @@ class Client {
 	public array $_requests = [];
 	public ?ListMeta $watchlist = null;
 	public ?ListMeta $ratedlist = null;
-	protected Account $account;
+	protected ?Account $account;
 
 	public function __construct(Auth $auth) {
 		$this->auth = $auth;
@@ -221,15 +221,15 @@ class Client {
 		return Actor::fromCreditsDocument($doc);
 	}
 
-	public function getTitleRatingsMeta() : ?ListMeta {
-		$this->getTitleRatings(simple: true);
+	public function getRatedTitlesMeta() : ?ListMeta {
+		$this->getRatedTitles(simple: true);
 		return $this->ratedlist;
 	}
 
 	/**
 	 * @return list<Title>
 	 */
-	public function getTitleRatings(bool $simple = false, int $page = 1) : array {
+	public function getRatedTitles(bool $simple = false, int $page = 1) : array {
 		if (file_exists($debugFilepath = sys_get_temp_dir() . '/imdb-ratings.html')) {
 			$html = file_get_contents($debugFilepath);
 
@@ -344,12 +344,29 @@ class Client {
 
 		if ($simple) return $titles;
 
-		// Plus GraphQL data
+		try {
+			$ratings = $this->getTitleRatings(array_column($titles, 'id'));
+			foreach ($titles as $title) {
+				$title->userRating = $ratings[$title->id] ?? null;
+			}
+		}
+		catch (Exception $ex) {
+			// Ignore
+		}
+
+		return $titles;
+	}
+
+	/**
+	 * @param list<string> $ids
+	 * @return array<string, TitleRating>
+	 */
+	public function getTitleRatings(array $ids) : array {
 		$body = [
 			'operationName' => 'PersonalizedUserData',
 			'variables' => [
 				'locale' => 'en-US',
-				'idArray' => array_column($titles, 'id'),
+				'idArray' => $ids,
 				'includeUserData' => true,
 				'includeWatchedData' => true,
 				'location' => [
@@ -364,41 +381,26 @@ class Client {
 				'persistedQuery' => static::$userRatingsPersistedQuery,
 			],
 		];
-		try {
-			$rsp = $this->graphqlRaw($body);
-			$json = (string) $rsp->getBody();
-			$data = $this->unpackGraphqlJson($json);
 
-			$ratings = array_column($data['data']['titles'], 'userRating', 'id');
-			foreach ($titles as $title) {
-				if (isset($ratings[$title->id])) {
-					$rating = $ratings[$title->id];
-					$title->userRating = new TitleRating($title->id, $rating['value'], ratedOn: strtotime($rating['date']));
-				}
-			}
-		}
-		catch (Exception $ex) {
-			// Ignore
+		$rsp = $this->graphqlRaw($body);
+		$json = (string) $rsp->getBody();
+		$data = $this->unpackGraphqlJson($json);
+
+		$ratings = [];
+		foreach ($data['data']['titles'] as $info) {
+			$rating = $info['userRating'];
+			if (!$rating) continue;
+
+			$id = $info['id'];
+			$ratings[$id] = new TitleRating($id, $rating['value'], ratedOn: strtotime($rating['date']));
 		}
 
-		return $titles;
+		return $ratings;
 	}
 
 	public function getTitleRating(string $id) : TitleRating {
-		$data = $this->graphqlData(<<<'GRAPHQL'
-		query GetTitle($titleId: ID!) {
-			title(id: $titleId) {
-				id
-				userRating {
-					value
-				}
-			}
-		}
-		GRAPHQL, [
-			'titleId' => $id,
-		]);
-
-		return new TitleRating($id, $data['data']['title']['userRating']['value'] ?? null);
+		$ratings = $this->getTitleRatings([$id]);
+		return $ratings[$id] ?? new TitleRating($id, rating: null);
 	}
 
 	public function rateTitle(string $id, int $rating) : bool {
