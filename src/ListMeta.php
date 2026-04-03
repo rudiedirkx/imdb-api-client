@@ -13,6 +13,7 @@ class ListMeta {
 
 	const VERSION_2023 = 1;
 	const VERSION_2024 = 2;
+	const VERSION_GRAPHQL = 3;
 
 	public function __construct(
 		public int $type,
@@ -44,6 +45,19 @@ class ListMeta {
 			);
 		}, $lists)));
 		return $lists;
+	}
+
+	/**
+	 * @param AssocArray $root
+	 */
+	static public function fromRatings(array $root) : static {
+		return new static(
+			self::TYPE_RATED,
+			'Ratings',
+			$root['userRatings']['total'],
+			id: $root['userProfile']['userId'],
+			version: self::VERSION_GRAPHQL,
+		);
 	}
 
 	/**

@@ -224,142 +224,45 @@ class Client {
 	}
 
 	public function getRatedTitlesMeta() : ?ListMeta {
-		$this->getRatedTitles(simple: true);
+		if (isset($this->ratedlist)) return $this->ratedlist;
+
+		$data = $this->graphqlData(<<<'GRAPHQL'
+		query Ratings {
+			userProfile {
+				userId
+			}
+			userRatings(first: 1) {
+				total
+			}
+		}
+		GRAPHQL);
+
+		$this->ratedlist = ListMeta::fromRatings($data['data']);
+
 		return $this->ratedlist;
 	}
 
 	/**
+	 * @todo Pager/cursor
+	 *
 	 * @return list<Title>
 	 */
-	public function getRatedTitles(bool $simple = false, int $page = 1) : array {
+	public function getRatedTitles(?Pager $pager = null) : array {
+		$data = $this->graphqlData((string) file_get_contents(__DIR__ . '/ratings.graphql'), [
+			'limit' => $pager?->limit,
+			'cursor' => $pager?->cursor,
+		]);
 
-		// query { userRatings }
-
-		if (file_exists($debugFilepath = sys_get_temp_dir() . '/imdb-ratings.html')) {
-			$html = file_get_contents($debugFilepath);
-
-			$redirects = [];
-		}
-		else {
-			// $userId = $this->getUserId();
-			$url = "https://www.imdb.com/list/ratings/";
-			if ($page != 1) {
-				if (!$this->account?->userId) {
-					throw new RuntimeException("");
-				}
-
-				$uid = $this->account->userId;
-				$url = "https://www.imdb.com/user/$uid/ratings/?sort=date_added%2Cdesc&page=$page";
-			}
-			$rsp = $this->get($url, [
-				'headers' => [
-					'accept' => 'text/html',
-				],
-			]);
-			$html = (string) $rsp->getBody();
-			// file_put_contents($debugFilepath, $html);
-
-			$redirects = $rsp->getHeader(RedirectMiddleware::HISTORY_HEADER);
-		}
-		$dom = Node::create($html);
-
-		$userId = null;
-		if (count($redirects)) {
-			$url = end($redirects);
-			if (preg_match('#/user/(ur\d+)/ratings\b#', $url, $match)) {
-				$userId = $match[1];
-				$this->setAccount($userId);
-			}
+		if ($pager) {
+			$cursor = $data['data']['userRatings']['pageInfo']['endCursor'];
+			$pager->cursor = $cursor;
 		}
 
-		// Old 2023
-		$el = $dom->query('.lister-list-length');
-		if ($el) {
-			if (preg_match('#[\d,]+ \(of ([\d,]+)\) titles#', $el->textContent, $match)) {
-				$count = (int) str_replace(',', '', $match[1]);
-				$this->ratedlist = new ListMeta(
-					ListMeta::TYPE_RATED,
-					'Ratings',
-					$count,
-					id: $userId,
-					version: ListMeta::VERSION_2023,
-				);
-			}
+		$this->ratedlist = ListMeta::fromRatings($data['data']);
 
-			$titles = [];
-			foreach ($dom->queryAll('.lister-item') as $item) {
-				if ($title = Title::fromListItem2023($item)) {
-					$titles[] = $title;
-				}
-			}
-
-			return $titles;
-		}
-
-		$titles = [];
-
-		// New 2024
-		// ~250 from JSON
-		$el = $dom->query('script#__NEXT_DATA__');
-		if ($el) {
-			$json = $el->textContent;
-			$data = json_decode($json, true);
-			if (isset($data['props']['pageProps']['mainColumnData']['advancedTitleSearch']['edges'][0]['node'])) {
-				$advancedTitleSearch = $data['props']['pageProps']['mainColumnData']['advancedTitleSearch'];
-				$count = $advancedTitleSearch['total'];
-
-				$this->ratedlist = new ListMeta(
-					ListMeta::TYPE_RATED,
-					'Ratings',
-					$count,
-					id: $userId,
-					version: ListMeta::VERSION_2024,
-				);
-
-				foreach (array_slice($advancedTitleSearch['edges'], 0, 260) as $edge) {
-					$titles[] = Title::fromGraphqlNode($edge['node']['title']);
-				}
-			}
-		}
-
-		if (!count($titles)) {
-			// ~25 from HTML
-			$el = $dom->query('[data-testid="list-page-mc-total-items"]');
-			if ($el) {
-				if (preg_match('#^([\d,]+) titles#', $el->textContent, $match)) {
-					$count = (int) str_replace(',', '', $match[1]);
-					$this->ratedlist = new ListMeta(
-						ListMeta::TYPE_RATED,
-						'Ratings',
-						$count,
-						id: $userId,
-						version: ListMeta::VERSION_2024,
-					);
-				}
-
-				foreach ($dom->queryAll('.ipc-metadata-list-summary-item') as $item) {
-					if ($title = Title::fromListItem2024($item)) {
-						$titles[] = $title;
-					}
-				}
-			}
-		}
-
-		if (!count($titles)) return [];
-
-		if ($simple) return $titles;
-
-		try {
-			$ratings = $this->getTitleRatings(array_column($titles, 'id'));
-			foreach ($titles as $title) {
-				$title->userRating = $ratings[$title->id] ?? null;
-			}
-		}
-		catch (Exception $ex) {
-			// Ignore
-		}
-
-		return $titles;
+		return array_values(array_map(function(array $edge) {
+			return Title::fromGraphqlRatingsNode($edge['node']);
+		}, $data['data']['userRatings']['edges']));
 	}
 
 	/**
@@ -643,9 +546,9 @@ class Client {
 			return false;
 		}
 
-		if (count($data['errors'] ?? [])) {
-			return false;
-		}
+		// if (count($data['errors'] ?? [])) {
+		// 	return false;
+		// }
 
 		if (!isset($data['data']['predefinedList']['items']['total'])) {
 			return false;
@@ -657,7 +560,7 @@ class Client {
 	}
 
 	/**
-	 * @return AssocArray
+	 * @return array{data: AssocArray}
 	 */
 	protected function unpackGraphqlJson(string $json) : array {
 		$data = json_decode($json, true);
@@ -674,7 +577,7 @@ class Client {
 
 	/**
 	 * @param AssocArray $vars
-	 * @return AssocArray
+	 * @return array{data: AssocArray}
 	 */
 	public function graphqlData(string $query, array $vars = []) : array {
 		$rsp = $this->graphql($query, $vars);

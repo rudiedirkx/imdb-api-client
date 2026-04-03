@@ -1,0 +1,41 @@
+query Ratings($cursor : String, $limit : Int = 250) {
+	userProfile {
+		userId
+	}
+
+	userRatings(first: $limit, after: $cursor, sort: {by: MOST_RECENT, order: DESC}) {
+		total
+		pageInfo {
+			hasNextPage
+			endCursor
+		}
+		edges {
+			node {
+				__typename
+				title {
+					id
+					titleText {
+						text
+					}
+					primaryImage {
+						url
+						width
+						height
+					}
+					ratingsSummary {
+						aggregateRating
+						voteCount
+					}
+					releaseYear {
+						year
+						endYear
+					}
+				}
+				userRating {
+					date
+					value
+				}
+			}
+		}
+	}
+}

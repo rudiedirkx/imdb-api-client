@@ -26,7 +26,7 @@ class Title implements SearchResult {
 		public string $name,
 		public ?string $originalName = null,
 		public ?int $type = null,
-		public ?Title $series = null, // Deprecated, use $episode
+		// public ?Title $series = null,
 		public ?Episode $episode = null,
 		/** @var list<Title> */
 		public array $episodes = [],
@@ -193,6 +193,15 @@ class Title implements SearchResult {
 	}
 
 	/**
+	 * @param AssocArray $node
+	 */
+	static public function fromGraphqlRatingsNode(array $node) : Title {
+		$title = static::fromGraphqlNode($node['title']);
+		$title->userRating = TitleRating::fromGraphqlRating($title->id, $node['userRating']);
+		return $title;
+	}
+
+	/**
 	 * @param AssocArray $title
 	 */
 	static public function fromGraphqlNode(array $title) : Title {
@@ -202,7 +211,7 @@ class Title implements SearchResult {
 			$title['titleText']['text'],
 			originalName: $title['originalTitleText']['text'] ?? null,
 			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
-			series: empty($title['series']['series']) ? null : self::fromGraphqlNode($title['series']['series']),
+			// series: empty($title['series']['series']) ? null : self::fromGraphqlNode($title['series']['series']),
 			episode: empty($title['series']['episodeNumber']) ? null : Episode::fromGraphqlNode($title['series']),
 			episodes: empty($title['episodes']['episodes']['edges']) ? [] : array_map(function(array $info) {
 				return self::fromGraphqlNode($info['node']);
@@ -222,51 +231,6 @@ class Title implements SearchResult {
 			directors: array_map(function(array $info) {
 				return Person::fromGraphqlNode($info['node']['name']);
 			}, $title['directors']['edges'] ?? []),
-		);
-	}
-
-	static public function fromListItem2024(Node $item) : ?Title {
-		$a = $item->query('a');
-		$title = $item->query('.ipc-title__text');
-		$img = $item->query('img');
-		$metas = $item->queryAll('.dli-title-metadata-item');
-		$year = $duration = null;
-		foreach ($metas as $meta) {
-			if (!$year) {
-				$year = preg_match('#^\d{4}$#', $metas[0]->textContent) ? (int) $meta->textContent : null;
-			}
-			if (!$duration) {
-				$duration = static::getDurationFromLabel($meta->textContent);
-			}
-		}
-
-		return new static(
-			$id = static::getIdFromHref($a['href']),
-			preg_replace('#^\d+\. #', '', $title->textContent),
-			year: $year,
-			duration: $duration,
-			image: new Image($img['src']),
-		);
-	}
-
-	static public function fromListItem2023(Node $item) : ?Title {
-		$a = $item->query('a');
-		$img = $item->query('img');
-		$year = $item->query('.lister-item-year');
-		$rating = $item->query('input[name="rating"]');
-		$duration = $item->query('.runtime');
-
-		$year = (int) trim($year->textContent, 'I )(');
-
-		$ratedOn = preg_match('#Rated on (\d+ \w+ \d{4})#', $item->textContent, $match) ? (int) strtotime($match[1]) : null;
-
-		return new static(
-			$id = static::getIdFromHref($a['href']),
-			$img['alt'],
-			year: $year ?: null,
-			duration: static::getDurationFromLabel($duration->textContent ?? ''),
-			userRating: new TitleRating($id, $rating['value'], ratedOn: $ratedOn),
-			image: new Image($img['loadlate']),
 		);
 	}
 
