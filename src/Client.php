@@ -45,6 +45,8 @@ class Client {
 				// 'User-agent' => 'imdb/1.1',
 				'User-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
 				'Accept-language' => 'en-CA,en;q=0.9',
+				'Origin' => 'https://www.imdb.com',
+				'Referer' => 'https://www.imdb.com/',
 			],
 			'allow_redirects' => [
 				'track_redirects' => true,
@@ -230,6 +232,9 @@ class Client {
 	 * @return list<Title>
 	 */
 	public function getRatedTitles(bool $simple = false, int $page = 1) : array {
+
+		// query { userRatings }
+
 		if (file_exists($debugFilepath = sys_get_temp_dir() . '/imdb-ratings.html')) {
 			$html = file_get_contents($debugFilepath);
 

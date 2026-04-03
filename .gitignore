@@ -3,3 +3,4 @@
 /env.php
 /_project/
 /tests/graphiql/
+/tests/introspection.cache

@@ -29,4 +29,11 @@ class Character {
 		return $this->name;
 	}
 
+	/**
+	 * @param list<string> $names
+	 */
+	static public function fromNames(array $names) : self {
+		return new static(implode(self::DELIM, array_unique($names)) ?: '?');
+	}
+
 }

@@ -15,33 +15,46 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 			width
 			height
 		}
-		credits(first: $numCredits, filter: {categories: ["actor", "actress"], productionStage: RELEASED}, sort: {by: RELEASE_DATE, order: DESC}) {
+		creditsV2(
+			first: $numCredits,
+			creditSort: {by: "LATEST_RELEASE_DATE", order: DESC},
+			filter: {
+				creditLevelFilter: {includeTraits: [CAST_TRAIT]},
+				titleLevelFilter: {excludeGenres: ["Talk-Show", "News"], productionStage: RELEASED}
+			}
+		) {
 			edges {
 				node {
-					... on Cast {
-						characters {
-							name
-						}
-					}
-					title {
-						...TitleDetails
-					}
+					...CreditDetails
 				}
 			}
 		}
-		knownFor(first: $numCredits) {
-			edges {
-				node {
-					title {
-						...TitleDetails
-					}
-					summary {
-						principalCharacters {
+		knownForV2 {
+			credits {
+				...CreditDetails
+			}
+		}
+	}
+}
+
+fragment CreditDetails on CreditV2 {
+	title {
+		...TitleDetails
+	}
+	episodeCredits(first: 1) {
+		yearRange {
+			year
+			endYear
+		}
+	}
+	creditedRoles(first: 3) {
+		edges {
+			node {
+				text
+				characters(first: 3) {
+					edges {
+						node {
 							name
-						}
-						yearRange {
-							year
-							endYear
 						}
 					}
 				}

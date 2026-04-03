@@ -55,12 +55,19 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 						titleText {
 							text
 						}
+						series {
+							episodeNumber {
+								episodeNumber
+								seasonNumber
+							}
+						}
 					}
 				}
 			}
 		}
 		userRating {
 			value
+			date
 		}
 		ratingsSummary {
 			aggregateRating
@@ -87,7 +94,7 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 			year
 			endYear
 		}
-		credits(first: $numCredits) {
+		directors: credits(first: 3, filter: {categories: ["director"]}) {
 			edges {
 				node {
 					name {
@@ -95,15 +102,51 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 						nameText {
 							text
 						}
-						birthDate {
-							date
-							dateComponents {
-								year
-							}
-						}
 					}
-					... on Cast {
-						characters {
+				}
+			}
+		}
+		creditsV2(
+			first: $numCredits,
+			filter: {
+				creditLevelFilter: {includeTraits: [CAST_TRAIT]}
+			}
+		) {
+			edges {
+				node {
+					...CreditDetails
+				}
+			}
+		}
+	}
+}
+
+fragment CreditDetails on CreditV2 {
+	name {
+		id
+		nameText {
+			text
+		}
+		birthDate {
+			date
+			dateComponents {
+				year
+			}
+		}
+	}
+	episodeCredits(first: 1) {
+		yearRange {
+			year
+			endYear
+		}
+	}
+	creditedRoles(first: 3) {
+		edges {
+			node {
+				text
+				characters(first: 3) {
+					edges {
+						node {
 							name
 						}
 					}

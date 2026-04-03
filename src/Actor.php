@@ -11,37 +11,35 @@ class Actor {
 		public ?Character $character,
 		public ?Title $title,
 		public ?string $source = null,
+		public ?int $fromYear = null,
+		public ?int $toYear = null,
 	) {}
 
 	/**
 	 * @param AssocArray $node
 	 */
-	static protected function fromGraphqlPerson(array $node) : ?static {
-		if (!empty($node['summary']['principalCharacters'])) {
-			return new static(
-				null,
-				new Character($node['summary']['principalCharacters'][0]['name']),
-				Title::fromGraphqlNode($node['title']),
-			);
-		}
+	static protected function fromCredit(array $node) : static {
+		$title = isset($node['title']) ? Title::fromGraphqlNode($node['title']) : null;
+		$person = isset($node['name']) ? Person::fromGraphqlNode($node['name']) : null;
 
-		if (!empty($node['characters'])) {
-			return new static(
-				null,
-				new Character($node['characters'][0]['name']),
-				Title::fromGraphqlNode($node['title']),
-			);
+		$charNames = [];
+		foreach ($node['creditedRoles']['edges'] ?? [] as $edge2) {
+			foreach ($edge2['node']['characters']['edges'] as $edge3) {
+				$charNames[] = $edge3['node']['name'];
+			}
 		}
+		$character = Character::fromNames($charNames);
 
-		if (!empty($node['title'])) {
-			return new static(
-				null,
-				null,
-				Title::fromGraphqlNode($node['title']),
-			);
-		}
+		$fromYear = $node['episodeCredits']['yearRange']['year'] ?? null;
+		$toYear = $node['episodeCredits']['yearRange']['endYear'] ?? null;
 
-		return null;
+		return new static(
+			person: $person,
+			character: $character,
+			title: $title,
+			fromYear: $fromYear,
+			toYear: $toYear,
+		);
 	}
 
 	/**
@@ -53,17 +51,15 @@ class Actor {
 		$actors = [];
 
 		foreach ($credits as $edge) {
-			if ($actor = static::fromGraphqlPerson($edge['node'])) {
-				$actor->source = 'credits';
-				$actors[$actor->title->id] = $actor;
-			}
+			$actor = static::fromCredit($edge['node']);
+			$actor->source = 'credits';
+			$actors[$actor->title->id] = $actor;
 		}
 
-		foreach ($knownFor as $edge) {
-			if ($actor = static::fromGraphqlPerson($edge['node'])) {
-				$actor->source = 'knownFor';
-				$actors[$actor->title->id] = $actor;
-			}
+		foreach ($knownFor as $node) {
+			$actor = static::fromCredit($node);
+			$actor->source = 'knownFor';
+			$actors[$actor->title->id] = $actor;
 		}
 
 		usort($actors, fn($a, $b) => $b->title->year <=> $a->title->year);
@@ -76,13 +72,18 @@ class Actor {
 	 * @return list<Actor>
 	 */
 	static public function fromGraphqlTitleCredits(array $credits) : array {
+		return array_map(function(array $edge) {
+			return static::fromCredit($edge['node']);
+		}, $credits);
+	}
+
+	/**
+	 * @param list<AssocArray> $credits
+	 * @return list<Actor>
+	 */
+	static public function fromGraphqlPrincipalCredits(array $credits) : array {
 		return array_map(function(array $node) {
-			$charNames = implode(Character::DELIM, array_column($node['node']['characters'] ?? [], 'name'));
-			return new static(
-				Person::fromGraphqlNode($node['name'] ?? $node['node']['name']),
-				new Character($charNames ?: '?'),
-				null,
-			);
+			return static::fromCredit($node);
 		}, $credits);
 	}
 

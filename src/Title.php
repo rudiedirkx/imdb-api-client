@@ -26,7 +26,8 @@ class Title implements SearchResult {
 		public string $name,
 		public ?string $originalName = null,
 		public ?int $type = null,
-		public ?Title $series = null,
+		public ?Title $series = null, // Deprecated, use $episode
+		public ?Episode $episode = null,
 		/** @var list<Title> */
 		public array $episodes = [],
 		/** @var list<string> */
@@ -38,6 +39,8 @@ class Title implements SearchResult {
 		public ?string $searchInfo = null,
 		/** @var list<Actor> */
 		public array $actors = [],
+		/** @var list<Person> */
+		public array $directors = [],
 		public ?float $rating = null,
 		public ?int $ratings = null,
 		public ?TitleRating $userRating = null,
@@ -200,6 +203,7 @@ class Title implements SearchResult {
 			originalName: $title['originalTitleText']['text'] ?? null,
 			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
 			series: empty($title['series']['series']) ? null : self::fromGraphqlNode($title['series']['series']),
+			episode: empty($title['series']['episodeNumber']) ? null : Episode::fromGraphqlNode($title['series']),
 			episodes: empty($title['episodes']['episodes']['edges']) ? [] : array_map(function(array $info) {
 				return self::fromGraphqlNode($info['node']);
 			}, $title['episodes']['episodes']['edges']),
@@ -210,9 +214,14 @@ class Title implements SearchResult {
 			duration: $title['runtime']['seconds'] ?? null,
 			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
 			ratings: $title['ratingsSummary']['voteCount'] ?? null,
-			userRating: array_key_exists('userRating', $title) ? new TitleRating($title['id'], $title['userRating']['value'] ?? null) : null,
+			userRating: array_key_exists('userRating', $title) ? TitleRating::fromGraphqlRating($title['id'], $title['userRating']) : null,
 			image: Image::fromGraphql($title['primaryImage'] ?? []),
-			actors: Actor::fromGraphqlTitleCredits($title['credits']['edges'] ?? $title['principalCredits'][0]['credits'] ?? []),
+			actors: isset($title['principalCredits'])
+				? Actor::fromGraphqlPrincipalCredits($title['principalCredits'][0]['credits'] ?? [])
+				: Actor::fromGraphqlTitleCredits($title['creditsV2']['edges'] ?? []),
+			directors: array_map(function(array $info) {
+				return Person::fromGraphqlNode($info['node']['name']);
+			}, $title['directors']['edges'] ?? []),
 		);
 	}
 
