@@ -37,7 +37,7 @@ class GraphqlIntrospectionCrawler {
 
 		$data = file_get_contents($filepath);
 		$data = $data ? unserialize($data) : [];
-		$this->todo = $data['todo'] ?? ['Query'];
+		$this->todo = $data['todo'] ?? ['Query', 'Mutation'];
 		$this->done = $data['done'] ?? [];
 		$this->simplifyTypes($this->done);
 	}
@@ -48,8 +48,8 @@ class GraphqlIntrospectionCrawler {
 	public function getSchema() : array {
 		return [
 			'directives' => [],
-			'mutationType' => null,
-			'queryType' => ['name' => 'Query'],
+			'mutationType' => isset($this->done['Mutation']) ? ['name' => 'Mutation'] : null,
+			'queryType' => isset($this->done['Query']) ? ['name' => 'Query'] : null,
 			'subscriptionType' => null,
 			'types' => array_values($this->done),
 		];
@@ -94,6 +94,8 @@ echo "OK\n";
 
 // if (rand(0, 5) == 0) return;
 		}
+
+var_dump(count($this->done));
 	}
 
 	/**
