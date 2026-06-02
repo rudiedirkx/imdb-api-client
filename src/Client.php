@@ -132,19 +132,19 @@ class Client {
 	 * @return list<string>  The tt ids that are in the watchlist
 	 */
 	public function titlesInWatchlist(array $ids) : array {
-		$body = [
-			'operationName' => 'WatchlistStateById',
-			'variables' => [
-				'ids' => $ids,
-			],
-			'extensions' => [
-				'persistedQuery' => static::$watchlistStatePersistedQuery,
-			],
-		];
 		try {
-			$rsp = $this->graphqlRaw($body);
-			$json = (string) $rsp->getBody();
-			$data = $this->unpackGraphqlJson($json);
+			$data = $this->graphqlData(<<<'GRAPHQL'
+			query InWatchlist($ids: [ID!]!) {
+				predefinedList(classType: WATCH_LIST) {
+					areElementsInList(itemElementIds: $ids) {
+						itemElementId
+						isElementInList
+					}
+				}
+			}
+			GRAPHQL, [
+				'ids' => $ids,
+			]);
 			$list = array_column($data['data']['predefinedList']['areElementsInList'], 'isElementInList', 'itemElementId');
 			return array_keys(array_filter($list));
 		}
@@ -270,29 +270,19 @@ class Client {
 	 * @return array<string, TitleRating>
 	 */
 	public function getTitleRatings(array $ids) : array {
-		$body = [
-			'operationName' => 'PersonalizedUserData',
-			'variables' => [
-				'locale' => 'en-US',
-				'idArray' => $ids,
-				'includeUserData' => true,
-				'includeWatchedData' => true,
-				'location' => [
-					'latLong' => [
-						'lat' => '52.35',
-						'long' => '4.89',
-					],
-				],
-				'fetchOtherUserRating' => false,
-			],
-			'extensions' => [
-				'persistedQuery' => static::$userRatingsPersistedQuery,
-			],
-		];
-
-		$rsp = $this->graphqlRaw($body);
-		$json = (string) $rsp->getBody();
-		$data = $this->unpackGraphqlJson($json);
+		$data = $this->graphqlData(<<<'GRAPHQL'
+		query Ratings($ids: [ID!]!) {
+			titles(ids: $ids) {
+				id
+				userRating {
+					value
+					date
+				}
+			}
+		}
+		GRAPHQL, [
+			'ids' => $ids,
+		]);
 
 		$ratings = [];
 		foreach ($data['data']['titles'] as $info) {
