@@ -4,3 +4,4 @@
 /_project/
 /tests/graphiql/
 /tests/introspection.cache*
+/tests/introspection.json*

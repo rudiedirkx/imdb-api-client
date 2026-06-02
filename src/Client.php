@@ -530,25 +530,20 @@ class Client {
 	}
 
 	protected function checkSession() : bool {
-		$body = [
-			'operationName' => 'WatchlistCount',
-			'extensions' => [
-				'persistedQuery' => static::$watchlistCountPersistedQuery,
-			],
-		];
 		try {
-			$rsp = $this->graphqlRaw($body);
-			$json = (string) $rsp->getBody();
-// dump($json);
-			$data = $this->unpackGraphqlJson($json);
+			$data = $this->graphqlData(<<<'GRAPHQL'
+			query Watchlist {
+				predefinedList(classType: WATCH_LIST) {
+					items(first: 0) {
+						total
+					}
+				}
+			}
+			GRAPHQL);
 		}
 		catch (Exception $ex) {
 			return false;
 		}
-
-		// if (count($data['errors'] ?? [])) {
-		// 	return false;
-		// }
 
 		if (!isset($data['data']['predefinedList']['items']['total'])) {
 			return false;
@@ -598,7 +593,10 @@ class Client {
 	protected function graphqlRaw(array $body) : ResponseInterface {
 		$url = 'https://api.graphql.imdb.com/';
 		$rsp = $this->guzzle->post($url, [
-			// 'headers' => ['Content-type' => 'application/json'],
+			'headers' => [
+				'Content-type' => 'application/json',
+				'Accept' => 'application/graphql+json, application/json',
+			],
 			'json' => $body,
 		]);
 		if (is_string($body['operationName'] ?? null)) {

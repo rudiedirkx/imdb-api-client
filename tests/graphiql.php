@@ -23,7 +23,7 @@ if (!empty($_GET['introspection']) || str_starts_with(trim($input['query']), 'qu
 
 // Remove all lines starting with #
 $input['query'] = trim(implode("\n", array_filter(explode("\n", $input['query']), function($line) {
-	return !str_starts_with($line, '#');
+	return !str_starts_with(trim($line), '#');
 })));
 
 $rsp = $client->graphql($input['query'], $input['variables'] ?? []);

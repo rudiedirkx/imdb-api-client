@@ -7,7 +7,7 @@ use rdx\imdb\AuthWeb;
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../env.php';
 
-header('Content-type: text/plain; charset=utf-8');
+// header('Content-type: text/plain; charset=utf-8');
 
 $client = new Client(
 	// new AuthWeb(IMDB_USER, IMDB_PASS)
