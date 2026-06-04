@@ -35,12 +35,13 @@ class Client {
 	public ?ListMeta $ratedlist = null;
 	protected ?Account $account;
 
-	public function __construct(Auth $auth) {
+	public function __construct(Auth $auth, ?string $proxy = null) {
 		$this->auth = $auth;
 
 		$this->guzzle = new Guzzle([
 			'http_errors' => false,
 			'cookies' => $auth->cookies(),
+			'proxy' => $proxy,
 			'headers' => [
 				// 'User-agent' => 'imdb/1.1',
 				'User-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',

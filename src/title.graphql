@@ -94,9 +94,12 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 			year
 			endYear
 		}
-		directors: credits(first: 3, filter: {categories: ["director"]}) {
+		directors_writers: credits(first: 6, filter: {categories: ["director", "writer"]}) {
 			edges {
 				node {
+					category {
+						categoryId
+					}
 					name {
 						id
 						nameText {

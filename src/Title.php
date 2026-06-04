@@ -41,6 +41,8 @@ class Title implements SearchResult {
 		public array $actors = [],
 		/** @var list<Person> */
 		public array $directors = [],
+		/** @var list<Person> */
+		public array $writers = [],
 		public ?float $rating = null,
 		public ?int $ratings = null,
 		public ?TitleRating $userRating = null,
@@ -206,6 +208,16 @@ class Title implements SearchResult {
 	 */
 	static public function fromGraphqlNode(array $title) : Title {
 // dump($title);
+		$filterPeople = function(string $role, array $edges) : array {
+			$people = [];
+			foreach ($edges as $edge) {
+				if ($edge['node']['category']['categoryId'] == $role) {
+					$people[] = Person::fromGraphqlNode($edge['node']['name']);
+				}
+			}
+			return $people;
+		};
+
 		return new static(
 			$title['id'],
 			$title['titleText']['text'],
@@ -228,9 +240,8 @@ class Title implements SearchResult {
 			actors: isset($title['principalCredits'])
 				? Actor::fromGraphqlPrincipalCredits($title['principalCredits'][0]['credits'] ?? [])
 				: Actor::fromGraphqlTitleCredits($title['creditsV2']['edges'] ?? []),
-			directors: array_map(function(array $info) {
-				return Person::fromGraphqlNode($info['node']['name']);
-			}, $title['directors']['edges'] ?? []),
+			directors: $filterPeople('director', $title['directors_writers']['edges'] ?? []),
+			writers: $filterPeople('writer', $title['directors_writers']['edges'] ?? []),
 		);
 	}
 
