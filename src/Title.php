@@ -165,21 +165,6 @@ class Title implements SearchResult {
 	}
 
 	/**
-	 * @param array{genres?: list<AssocArray>} $genres
-	 * @return list<string>
-	 */
-	static public function extractGraphqlGenres(array $genres) : array {
-		$names = [];
-		foreach ($genres['genres'] ?? [] as $genre) {
-			if (isset($genre['text'])) {
-				$names[] = $genre['text'];
-			}
-		}
-
-		return $names;
-	}
-
-	/**
 	 * @param AssocArray $item
 	 */
 	static public function fromJsonSearch(array $item) : Title {
@@ -228,7 +213,7 @@ class Title implements SearchResult {
 			episodes: empty($title['episodes']['episodes']['edges']) ? [] : array_map(function(array $info) {
 				return self::fromGraphqlNode($info['node']);
 			}, $title['episodes']['episodes']['edges']),
-			genres: self::extractGraphqlGenres($title['genres'] ?? []),
+			genres: array_map(fn(array $node) => $node['genre']['text'], $title['titleGenres']['genres'] ?? []),
 			year: $title['releaseYear']['year'] ?? null,
 			endYear: $title['releaseYear']['endYear'] ?? null,
 			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,

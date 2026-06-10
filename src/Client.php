@@ -224,6 +224,27 @@ class Client {
 		return Actor::fromCreditsDocument($doc);
 	}
 
+	/**
+	 * @return list<TitleListItem>
+	 */
+	public function getWatchlistTitles(?Pager $pager = null) : array {
+		$data = $this->graphqlData((string) file_get_contents(__DIR__ . '/watchlist.graphql'), [
+			'limit' => $pager?->limit,
+			'cursor' => $pager?->cursor,
+		]);
+
+		$this->watchlist = new ListMeta(ListMeta::TYPE_WATCHLIST, 'Watchlist', $data['data']['watchlist']['items']['total']);
+
+		if ($pager) {
+			$cursor = $data['data']['watchlist']['items']['pageInfo']['endCursor'];
+			$pager->cursor = $cursor;
+		}
+
+		return array_values(array_map(function(array $edge) {
+			return TitleListItem::fromGraphqlNode($edge['node']);
+		}, $data['data']['watchlist']['items']['edges']));
+	}
+
 	public function getRatedTitlesMeta() : ?ListMeta {
 		if (isset($this->ratedlist)) return $this->ratedlist;
 
@@ -244,8 +265,6 @@ class Client {
 	}
 
 	/**
-	 * @todo Pager/cursor
-	 *
 	 * @return list<Title>
 	 */
 	public function getRatedTitles(?Pager $pager = null) : array {

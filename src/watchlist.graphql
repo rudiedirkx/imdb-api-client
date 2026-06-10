@@ -1,0 +1,49 @@
+query Watchlist($cursor : ID, $limit : Int = 250) {
+	watchlist: predefinedList(classType: WATCH_LIST) {
+	    items(first: $limit, after: $cursor, sort: {by: CREATED_DATE, order: ASC}) {
+			total
+			pageInfo {
+				hasNextPage
+				endCursor
+			}
+			edges {
+				node {
+					absolutePosition
+					createdDate
+					listItem {
+						... on Title {
+							id
+							titleText {
+								text
+							}
+							primaryImage {
+								url
+								width
+								height
+							}
+							ratingsSummary {
+								aggregateRating
+								voteCount
+							}
+							releaseYear {
+								year
+								endYear
+							}
+							userRating {
+								date
+								value
+							}
+							titleGenres {
+								genres {
+									genre {
+										text
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
