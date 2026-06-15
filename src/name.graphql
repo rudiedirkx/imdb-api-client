@@ -83,6 +83,9 @@ fragment TitleDetails on Title {
 		year
 		endYear
 	}
+	runtime {
+		seconds
+	}
 	userRating {
 		value
 	}
