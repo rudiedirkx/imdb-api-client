@@ -287,16 +287,23 @@ class Client {
 
 	/**
 	 * @param list<string> $ids
-	 * @return array<string, TitleRating>
+	 * @return array<string, Title>
 	 */
 	public function getTitleRatings(array $ids) : array {
 		$data = $this->graphqlData(<<<'GRAPHQL'
 		query Ratings($ids: [ID!]!) {
 			titles(ids: $ids) {
 				id
+				titleText {
+					text
+				}
 				userRating {
 					value
 					date
+				}
+				ratingsSummary {
+					aggregateRating
+					voteCount
 				}
 			}
 		}
@@ -304,21 +311,18 @@ class Client {
 			'ids' => $ids,
 		]);
 
-		$ratings = [];
+		$titles = [];
 		foreach ($data['data']['titles'] as $info) {
-			$rating = $info['userRating'];
-			if (!$rating) continue;
-
-			$id = $info['id'];
-			$ratings[$id] = new TitleRating($id, $rating['value'], ratedOn: strtotime($rating['date']));
+			$title = Title::fromGraphqlNode($info);
+			$titles[$title->id] = $title;
 		}
 
-		return $ratings;
+		return $titles;
 	}
 
-	public function getTitleRating(string $id) : TitleRating {
+	public function getTitleRating(string $id) : ?Title {
 		$ratings = $this->getTitleRatings([$id]);
-		return $ratings[$id] ?? new TitleRating($id, rating: null);
+		return $ratings[$id] ?? null;
 	}
 
 	public function rateTitle(string $id, int $rating) : bool {
