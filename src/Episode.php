@@ -15,9 +15,10 @@ class Episode {
 	 */
 	static public function fromGraphqlNode(array $node) : ?static {
 		$title = empty($node['series']) ? null : Title::fromGraphqlNode($node['series']);
-		return new static($title,
-			season: $node['episodeNumber']['seasonNumber'],
-			episode: $node['episodeNumber']['episodeNumber'],
+		return new static(
+			$title,
+			season: $node['displayableEpisodeNumber']['displayableSeason']['season'],
+			episode: $node['displayableEpisodeNumber']['episodeNumber']['episodeNumber'],
 		);
 	}
 

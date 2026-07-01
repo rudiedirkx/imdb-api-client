@@ -209,7 +209,7 @@ class Title implements SearchResult {
 			originalName: $title['originalTitleText']['text'] ?? null,
 			type: self::typeFromTitleType($title['titleType']['id'] ?? ''),
 			// series: empty($title['series']['series']) ? null : self::fromGraphqlNode($title['series']['series']),
-			episode: empty($title['series']['episodeNumber']) ? null : Episode::fromGraphqlNode($title['series']),
+			episode: empty($title['series']['displayableEpisodeNumber']) ? null : Episode::fromGraphqlNode($title['series']),
 			episodes: empty($title['episodes']['episodes']['edges']) ? [] : array_map(function(array $info) {
 				return self::fromGraphqlNode($info['node']);
 			}, $title['episodes']['episodes']['edges']),

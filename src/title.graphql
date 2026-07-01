@@ -32,10 +32,7 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 			}
 		}
 		series {
-			episodeNumber {
-				episodeNumber
-				seasonNumber
-			}
+			...SeasonAndEpisode
 			series {
 				id
 				titleText {
@@ -56,10 +53,7 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 							text
 						}
 						series {
-							episodeNumber {
-								episodeNumber
-								seasonNumber
-							}
+							...SeasonAndEpisode
 						}
 					}
 				}
@@ -119,6 +113,17 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 	}
 }
 
+fragment SeasonAndEpisode on Series {
+	displayableEpisodeNumber {
+		episodeNumber {
+			episodeNumber
+		}
+		displayableSeason {
+			season
+		}
+	}
+}
+
 fragment CreditDetails on CreditV2 {
 	name {
 		id
@@ -133,6 +138,7 @@ fragment CreditDetails on CreditV2 {
 		}
 	}
 	episodeCredits(first: 1) {
+		total
 		yearRange {
 			year
 			endYear

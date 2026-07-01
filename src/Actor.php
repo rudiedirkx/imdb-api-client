@@ -13,6 +13,7 @@ class Actor {
 		public ?string $source = null,
 		public ?int $fromYear = null,
 		public ?int $toYear = null,
+		public ?int $episodes = null,
 	) {}
 
 	/**
@@ -32,6 +33,7 @@ class Actor {
 
 		$fromYear = $node['episodeCredits']['yearRange']['year'] ?? null;
 		$toYear = $node['episodeCredits']['yearRange']['endYear'] ?? null;
+		$episodes = $node['episodeCredits']['total'] ?? null;
 
 		return new static(
 			person: $person,
@@ -39,6 +41,7 @@ class Actor {
 			title: $title,
 			fromYear: $fromYear,
 			toYear: $toYear,
+			episodes: $episodes,
 		);
 	}
 
