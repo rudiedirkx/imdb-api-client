@@ -101,7 +101,7 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 		creditsV2(
 			first: $numCredits,
 			filter: {
-				creditLevelFilter: {includeTraits: [CAST_TRAIT]}
+				creditLevelFilter: {includeTraits: [CAST_TRAIT, SELF_TRAIT]}
 			}
 		) {
 			edges {

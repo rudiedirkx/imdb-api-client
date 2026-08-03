@@ -42,6 +42,7 @@ fragment CreditDetails on CreditV2 {
 		...TitleDetails
 	}
 	episodeCredits(first: 1) {
+		total
 		yearRange {
 			year
 			endYear
