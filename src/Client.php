@@ -178,6 +178,47 @@ class Client {
 		return array_keys($data['has']);
 	}
 
+	public function getWatchlistItem(string $titleId) : ?TitleListItem {
+		$data = $this->graphqlData(<<<'GRAPHQL'
+		query InWatchlist($id: ID!) {
+			predefinedList(classType: WATCH_LIST) {
+				items(first: 1, jumpTo: $id) {
+					jumpToFound
+					edges {
+						node {
+							absolutePosition
+							createdDate
+							description {
+								originalText {
+									plainText
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		GRAPHQL, [
+			'id' => $titleId,
+		]);
+
+		if (empty($data['data']['predefinedList']['items']['jumpToFound'])) {
+			return null;
+		}
+
+		$node = $data['data']['predefinedList']['items']['edges'][0]['node'];
+
+		// Add fake empty Title list item
+		$node['listItem'] = [
+			'id' => $titleId,
+			'titleText' => [
+				'text' => $titleId,
+			],
+		];
+
+		return TitleListItem::fromGraphqlNode($node);
+	}
+
 	public function titleInWatchlist(string $id) : bool {
 		$hasIds = $this->titlesInWatchlist([$id]);
 		return in_array($id, $hasIds);

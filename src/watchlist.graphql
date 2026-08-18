@@ -10,6 +10,11 @@ query Watchlist($cursor : ID, $limit : Int = 250) {
 				node {
 					absolutePosition
 					createdDate
+					description {
+						originalText {
+							plainText
+						}
+					}
 					listItem {
 						... on Title {
 							id

@@ -8,6 +8,7 @@ class TitleListItem {
 		public Title $title,
 		public ?int $created,
 		public ?int $position,
+		public ?string $notes = null,
 	) {}
 
 	/**
@@ -18,6 +19,7 @@ class TitleListItem {
 			Title::fromGraphqlNode($node['listItem']),
 			strtotime($node['createdDate']),
 			$node['absolutePosition'],
+			$node['description']['originalText']['plainText'] ?? null,
 		);
 	}
 
