@@ -34,6 +34,8 @@ class Title implements SearchResult {
 		public array $genres = [],
 		/** @var list<string> */
 		public array $countries = [],
+		/** @var list<string> */
+		public array $languages = [],
 		public ?int $year = null,
 		public ?int $endYear = null,
 		public ?string $plot = null,
@@ -217,6 +219,7 @@ class Title implements SearchResult {
 			}, $title['episodes']['episodes']['edges']),
 			genres: array_map(fn(array $node) => $node['genre']['text'], $title['titleGenres']['genres'] ?? []),
 			countries: array_column($title['countriesOfOrigin']['countries'] ?? [], 'text'),
+			languages: array_column($title['spokenLanguages']['spokenLanguages'] ?? [], 'text'),
 			year: $title['releaseYear']['year'] ?? null,
 			endYear: $title['releaseYear']['endYear'] ?? null,
 			plot: $title['plots']['edges'][0]['node']['plotText']['plainText'] ?? null,
