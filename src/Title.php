@@ -30,6 +30,8 @@ class Title implements SearchResult {
 		public ?Episode $episode = null,
 		/** @var list<Title> */
 		public array $episodes = [],
+		public ?int $totalSeasons = null,
+		public ?int $totalEpisodes = null,
 		/** @var list<string> */
 		public array $genres = [],
 		/** @var list<string> */
@@ -217,6 +219,8 @@ class Title implements SearchResult {
 			episodes: empty($title['episodes']['episodes']['edges']) ? [] : array_map(function(array $info) {
 				return self::fromGraphqlNode($info['node']);
 			}, $title['episodes']['episodes']['edges']),
+			totalSeasons: $title['episodes']['displayableSeasons']['total'] ?? null,
+			totalEpisodes: $title['episodes']['episodes']['total'] ?? null,
 			genres: array_map(fn(array $node) => $node['genre']['text'], $title['titleGenres']['genres'] ?? []),
 			countries: array_column($title['countriesOfOrigin']['countries'] ?? [], 'text'),
 			languages: array_column($title['spokenLanguages']['spokenLanguages'] ?? [], 'text'),

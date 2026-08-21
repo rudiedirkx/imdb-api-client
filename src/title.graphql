@@ -54,6 +54,9 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 			}
 		}
 		episodes {
+			displayableSeasons(first: 0) {
+				total
+			}
 			episodes(first: 3) {
 				total
 				edges {
