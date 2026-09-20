@@ -35,6 +35,8 @@ class Title implements SearchResult {
 		/** @var list<string> */
 		public array $genres = [],
 		/** @var list<string> */
+		public array $interests = [],
+		/** @var list<string> */
 		public array $countries = [],
 		/** @var list<string> */
 		public array $languages = [],
@@ -45,18 +47,24 @@ class Title implements SearchResult {
 		public ?string $searchInfo = null,
 		/** @var list<Actor> */
 		public array $actors = [],
+		public ?string $moreActorsCursor = null,
 		/** @var list<Person> */
 		public array $directors = [],
 		/** @var list<Person> */
 		public array $writers = [],
 		public ?float $rating = null,
 		public ?int $ratings = null,
+		public ?int $metacriticRating = null,
+		public ?int $metacriticRatings = null,
 		public ?TitleRating $userRating = null,
 		public ?Image $image = null,
 	) {
 		if ($this->originalName === $this->name) {
 			$this->originalName = null;
 		}
+
+		natcasesort($this->genres);
+		natcasesort($this->interests);
 	}
 
 	public function getSearchInfo() : string {
@@ -222,6 +230,7 @@ class Title implements SearchResult {
 			totalSeasons: $title['episodes']['displayableSeasons']['total'] ?? null,
 			totalEpisodes: $title['episodes']['episodes']['total'] ?? null,
 			genres: array_map(fn(array $node) => $node['genre']['text'], $title['titleGenres']['genres'] ?? []),
+			interests: array_map(fn(array $node) => $node['node']['primaryText']['text'], $title['interests']['edges'] ?? []),
 			countries: array_column($title['countriesOfOrigin']['countries'] ?? [], 'text'),
 			languages: array_column($title['spokenLanguages']['spokenLanguages'] ?? [], 'text'),
 			year: $title['releaseYear']['year'] ?? null,
@@ -231,10 +240,13 @@ class Title implements SearchResult {
 			rating: $title['ratingsSummary']['aggregateRating'] ?? null,
 			ratings: $title['ratingsSummary']['voteCount'] ?? null,
 			userRating: array_key_exists('userRating', $title) ? TitleRating::fromGraphqlRating($title['id'], $title['userRating']) : null,
+			metacriticRating: $title['metacritic']['metascore']['score'] ?? null,
+			metacriticRatings: $title['metacritic']['metascore']['reviewCount'] ?? null,
 			image: Image::fromGraphql($title['primaryImage'] ?? []),
 			actors: isset($title['principalCredits'])
 				? Actor::fromGraphqlPrincipalCredits($title['principalCredits'][0]['credits'] ?? [])
 				: Actor::fromGraphqlTitleCredits($title['creditsV2']['edges'] ?? []),
+			moreActorsCursor: !empty($title['creditsV2']['pageInfo']['hasNextPage']) ? $title['creditsV2']['pageInfo']['endCursor'] : null,
 			directors: $filterPeople('director', $title['directors_writers']['edges'] ?? []),
 			writers: $filterPeople('writer', $title['directors_writers']['edges'] ?? []),
 		);

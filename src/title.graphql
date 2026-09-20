@@ -31,6 +31,16 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 				}
 			}
 		}
+		interests(first: 20) {
+			edges {
+				node {
+					primaryText {
+						text
+					}
+				}
+			}
+		}
+
 		spokenLanguages {
 			spokenLanguages {
 				text
@@ -80,6 +90,12 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 			aggregateRating
 			voteCount
 		}
+		metacritic {
+			metascore {
+				reviewCount
+				score
+			}
+		}
 		plots(first: 1) {
 			edges {
 				node {
@@ -117,6 +133,10 @@ query GetTitle($titleId: ID!, $numCredits: Int = 20) {
 				creditLevelFilter: {includeTraits: [CAST_TRAIT, SELF_TRAIT]}
 			}
 		) {
+			pageInfo {
+				hasNextPage
+				endCursor
+			}
 			edges {
 				node {
 					...CreditDetails

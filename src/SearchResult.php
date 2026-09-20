@@ -2,6 +2,9 @@
 
 namespace rdx\imdb;
 
+/**
+ * @property-read ?Image $image
+ */
 interface SearchResult {
 
 	// public $id;

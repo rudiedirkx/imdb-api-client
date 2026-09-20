@@ -30,6 +30,13 @@ query Ratings($cursor : String, $limit : Int = 250) {
 						year
 						endYear
 					}
+					titleGenres {
+						genres {
+							genre {
+								text
+							}
+						}
+					}
 				}
 				userRating {
 					date

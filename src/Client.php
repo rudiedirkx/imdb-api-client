@@ -90,6 +90,24 @@ class Client {
 		return Title::fromGraphqlNode($data['data']['title']);
 	}
 
+	public function getGraphqlTitleActors(string $titleId, string $cursor) : Title {
+		$data = $this->graphqlData((string) file_get_contents(__DIR__ . '/title_actors.graphql'), [
+			'titleId' => $titleId,
+			'cursor' => $cursor,
+		]);
+
+		$actors = Actor::fromGraphqlTitleCredits($data['data']['title']['creditsV2']['edges'] ?? []);
+
+		$cursor = !empty($data['data']['title']['creditsV2']['pageInfo']['hasNextPage']) ? $data['data']['title']['creditsV2']['pageInfo']['endCursor'] : null;
+
+		return new Title(
+			$titleId,
+			$titleId,
+			actors: $actors,
+			moreActorsCursor: $cursor,
+		);
+	}
+
 	/**
 	 * @return list<TitleListItem>
 	 */

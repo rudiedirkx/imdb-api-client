@@ -1,0 +1,57 @@
+query GetTitleActors($titleId: ID!, $numCredits: Int = 20, $cursor: ID!) {
+	title(id: $titleId) {
+		creditsV2(
+			first: $numCredits,
+			after: $cursor,
+			filter: {
+				creditLevelFilter: {includeTraits: [CAST_TRAIT, SELF_TRAIT]}
+			}
+		) {
+			pageInfo {
+				hasNextPage
+				endCursor
+			}
+			edges {
+				node {
+					...CreditDetails
+				}
+			}
+		}
+	}
+}
+
+fragment CreditDetails on CreditV2 {
+	name {
+		id
+		nameText {
+			text
+		}
+		birthDate {
+			date
+			dateComponents {
+				year
+			}
+		}
+	}
+	episodeCredits(first: 1) {
+		total
+		yearRange {
+			year
+			endYear
+		}
+	}
+	creditedRoles(first: 3) {
+		edges {
+			node {
+				text
+				characters(first: 3) {
+					edges {
+						node {
+							name
+						}
+					}
+				}
+			}
+		}
+	}
+}
