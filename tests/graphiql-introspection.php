@@ -10,6 +10,19 @@ $crawler = new GraphqlIntrospectionCrawler(
 	__DIR__ . '/introspection.cache',
 	pager: intval(getenv('TYPES_PAGER')) ?: 3,
 );
+
+$descriptions = !in_array('--no-comments', $argv ?? [], true);
+
+if (in_array('--sdl', $argv ?? [], true)) {
+	echo $crawler->getSDL($descriptions);
+	exit;
+}
+if (in_array('--json', $argv ?? [], true)) {
+	$result = ['data' => ['__schema' => $crawler->getSchema($descriptions)]];
+	echo json_encode($result);
+	exit;
+}
+
 // dd($crawler);
 foreach ($crawler->crawl() as $todo => $names) {
 	foreach ($names as $name) {

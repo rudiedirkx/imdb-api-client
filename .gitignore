@@ -5,3 +5,4 @@
 /tests/graphiql/
 /tests/introspection.cache*
 /tests/introspection.json*
+/tests/introspection.graphql*
