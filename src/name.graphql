@@ -19,7 +19,7 @@ query GetName($nameId: ID!, $numCredits : Int = 20) {
 			first: $numCredits,
 			creditSort: {by: "LATEST_RELEASE_DATE", order: DESC},
 			filter: {
-				creditLevelFilter: {includeTraits: [CAST_TRAIT]},
+				creditLevelFilter: {includeTraits: [CAST_TRAIT, MAJOR_CREATIVE_INPUT_TRAIT]},
 				titleLevelFilter: {excludeGenres: ["Talk-Show", "News"], productionStage: RELEASED}
 			}
 		) {
@@ -52,6 +52,9 @@ fragment CreditDetails on CreditV2 {
 		edges {
 			node {
 				text
+				category {
+					text
+				}
 				characters(first: 3) {
 					edges {
 						node {

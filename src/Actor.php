@@ -24,12 +24,22 @@ class Actor {
 		$person = isset($node['name']) ? Person::fromGraphqlNode($node['name']) : null;
 
 		$charNames = [];
+		$categoryTexts = [];
+		$roleTexts = [];
 		foreach ($node['creditedRoles']['edges'] ?? [] as $edge2) {
 			foreach ($edge2['node']['characters']['edges'] as $edge3) {
 				$charNames[] = $edge3['node']['name'];
 			}
+
+			if (isset($edge2['node']['category']['text'])) {
+				$categoryTexts[] = $edge2['node']['category']['text'];
+			}
+
+			if (isset($edge2['node']['text'])) {
+				$roleTexts[] = $edge2['node']['text'];
+			}
 		}
-		$character = Character::fromNames($charNames);
+		$character = Character::fromNames($charNames ?: $categoryTexts ?: $roleTexts);
 
 		$fromYear = $node['episodeCredits']['yearRange']['year'] ?? null;
 		$toYear = $node['episodeCredits']['yearRange']['endYear'] ?? null;
